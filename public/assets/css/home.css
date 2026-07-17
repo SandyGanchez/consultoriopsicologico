@@ -1,0 +1,188 @@
+:root{
+
+    --primary:#99CDD8;
+
+    --secondary:#DAEBE3;
+
+    --cream:#FDE8D3;
+
+    --accent:#F3C3B2;
+
+    --card:#CFD6C4;
+
+    --dark:#657166;
+
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:#fff;
+
+}
+
+.hero{
+
+    background:linear-gradient(
+        180deg,
+        var(--secondary),
+        white
+    );
+
+    min-height:90vh;
+
+    display:flex;
+
+    align-items:center;
+
+}
+
+.logo-home{
+
+    width:120px;
+
+}
+
+.hero h1{
+
+    color:var(--dark);
+
+}
+
+.hero h4{
+
+    color:#777;
+
+}
+
+.btn-primary{
+
+    background:var(--primary);
+
+    border:none;
+
+}
+
+.btn-primary:hover{
+
+    background:#83bcc8;
+
+}
+
+.btn-outline-secondary{
+
+    border:2px solid var(--dark);
+
+    color:var(--dark);
+
+}
+
+.btn-outline-secondary:hover{
+
+    background:var(--dark);
+
+    color:white;
+
+}
+.servicio-card{
+
+    border-radius:20px;
+
+    transition:.3s;
+
+    background:#fff;
+
+}
+
+.servicio-card:hover{
+
+    transform:translateY(-8px);
+
+}
+
+.icono-servicio{
+
+    width:80px;
+
+    height:80px;
+
+    margin:auto;
+
+    border-radius:50%;
+
+    background:#99CDD8;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.icono-servicio i{
+
+    font-size:2rem;
+
+    color:white;
+
+}
+.hero{
+
+    background:linear-gradient(180deg,#DAEBE3 0%,#FFFFFF 100%);
+
+    overflow:hidden;
+
+}
+
+.hero-img{
+
+    max-width:90%;
+
+    border-radius:25px;
+
+    box-shadow:0 20px 45px rgba(0,0,0,.12);
+
+    transition:.4s;
+
+}
+
+.hero-img:hover{
+
+    transform:scale(1.02);
+
+}
+
+.hero h1{
+
+    color:#657166;
+
+}
+
+.hero .lead{
+
+    line-height:1.8;
+
+}
+
+.badge{
+
+    font-size:.95rem;
+
+}
+
+.hero .btn{
+
+    transition:.3s;
+
+}
+
+.hero .btn:hover{
+
+    transform:translateY(-3px);
+
+}
+html{
+    scroll-behavior:smooth;
+}

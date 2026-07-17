@@ -1,0 +1,43 @@
+.navbar{
+
+    transition:.3s;
+
+}
+
+.nav-link{
+
+    color:#657166 !important;
+
+    font-weight:500;
+
+    margin:0 8px;
+
+}
+
+.nav-link:hover{
+
+    color:#99CDD8 !important;
+
+}
+
+.navbar-brand{
+
+    text-decoration:none;
+
+}
+
+.btn-outline-secondary{
+
+    border-color:#657166;
+
+    color:#657166;
+
+}
+
+.btn-outline-secondary:hover{
+
+    background:#657166;
+
+    color:white;
+
+}

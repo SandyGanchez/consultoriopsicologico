@@ -1,0 +1,548 @@
+:root {
+    --psi-primary: #99CDD8;
+    --psi-primary-light: #DAEBE3;
+    --psi-cream: #FDE8D3;
+    --psi-peach: #F3C3B2;
+    --psi-green-soft: #CFD6C4;
+    --psi-text: #657166;
+    --psi-white: #ffffff;
+    --psi-background: #f7f9f8;
+    --psi-sidebar-width: 270px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: var(--psi-background);
+    color: var(--psi-text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.psicologo-layout {
+    min-height: 100vh;
+    display: flex;
+}
+
+/* Sidebar */
+
+.psicologo-sidebar {
+    width: var(--psi-sidebar-width);
+    min-height: 100vh;
+    padding: 24px 18px;
+    background: linear-gradient(
+        180deg,
+        var(--psi-primary-light),
+        var(--psi-green-soft)
+    );
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1000;
+    box-shadow: 4px 0 18px rgba(101, 113, 102, 0.12);
+}
+
+.psicologo-brand {
+    padding: 0 8px 24px;
+    border-bottom: 1px solid rgba(101, 113, 102, 0.2);
+}
+
+.psicologo-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--psi-text);
+    text-decoration: none;
+}
+
+.psicologo-brand-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background-color: var(--psi-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--psi-primary);
+    font-size: 1.7rem;
+    box-shadow: 0 8px 20px rgba(101, 113, 102, 0.12);
+}
+
+.psicologo-brand-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.psicologo-brand-name {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.psicologo-brand small {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: rgba(101, 113, 102, 0.8);
+}
+
+.psicologo-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 24px;
+}
+
+.psicologo-menu-link {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    color: var(--psi-text);
+    text-decoration: none;
+    font-weight: 700;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.psicologo-menu-link > i {
+    width: 22px;
+    font-size: 1.15rem;
+    text-align: center;
+}
+
+.psicologo-menu-link:hover {
+    color: var(--psi-text);
+    background-color: rgba(255, 255, 255, 0.6);
+    transform: translateX(3px);
+}
+
+.psicologo-menu-link.active {
+    background-color: var(--psi-white);
+    box-shadow: 0 8px 18px rgba(101, 113, 102, 0.12);
+}
+
+.psicologo-sidebar-footer {
+    margin-top: auto;
+    padding-top: 20px;
+}
+
+.psicologo-logout {
+    background-color: rgba(243, 195, 178, 0.55);
+}
+
+/* Contenido */
+
+.psicologo-main {
+    width: calc(100% - var(--psi-sidebar-width));
+    min-height: 100vh;
+    margin-left: var(--psi-sidebar-width);
+    display: flex;
+    flex-direction: column;
+}
+
+.psicologo-navbar {
+    min-height: 78px;
+    padding: 14px 30px;
+    border-bottom: 1px solid rgba(101, 113, 102, 0.12);
+    background-color: var(--psi-white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.psicologo-navbar-title {
+    display: flex;
+    flex-direction: column;
+}
+
+.psicologo-navbar-title span {
+    font-weight: 800;
+}
+
+.psicologo-navbar-title small {
+    margin-top: 2px;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.8rem;
+}
+
+.psicologo-navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.psicologo-notification-button {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 14px;
+    background-color: var(--psi-primary-light);
+    color: var(--psi-text);
+    position: relative;
+}
+
+.psicologo-notification-count {
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background-color: var(--psi-peach);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.psicologo-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.psicologo-user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--psi-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.psicologo-user strong,
+.psicologo-user small {
+    display: block;
+}
+
+.psicologo-user strong {
+    font-size: 0.88rem;
+}
+
+.psicologo-user small {
+    color: rgba(101, 113, 102, 0.7);
+    font-size: 0.73rem;
+}
+
+.psicologo-content {
+    flex: 1;
+    padding: 32px;
+}
+
+/* Encabezado */
+
+.psicologo-page-header {
+    margin-bottom: 26px;
+}
+
+.psicologo-page-eyebrow,
+.psicologo-section-label {
+    display: inline-block;
+    color: var(--psi-text);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.psicologo-page-header h1 {
+    margin: 6px 0 8px;
+    font-size: clamp(1.8rem, 3vw, 2.45rem);
+    font-weight: 800;
+}
+
+.psicologo-page-header p {
+    max-width: 650px;
+    margin: 0;
+    color: rgba(101, 113, 102, 0.8);
+}
+
+/* Tarjetas */
+
+.psicologo-stat-card {
+    min-height: 130px;
+    padding: 22px;
+    border-radius: 20px;
+    background: linear-gradient(
+        135deg,
+        rgba(218, 235, 227, 0.95),
+        rgba(253, 232, 211, 0.8)
+    );
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.psicologo-stat-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background-color: var(--psi-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    font-size: 1.45rem;
+    box-shadow: 0 8px 18px rgba(101, 113, 102, 0.1);
+}
+
+.psicologo-stat-card span {
+    display: block;
+    color: rgba(101, 113, 102, 0.8);
+    font-size: 0.85rem;
+}
+
+.psicologo-stat-card strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 2rem;
+    line-height: 1;
+}
+
+/* Paneles */
+
+.psicologo-panel {
+    padding: 24px;
+    border-radius: 22px;
+    background-color: var(--psi-white);
+    box-shadow: 0 12px 30px rgba(101, 113, 102, 0.08);
+}
+
+.psicologo-panel-header {
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.psicologo-panel-header h2 {
+    margin: 5px 0 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.psicologo-link {
+    color: var(--psi-text);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.psicologo-link:hover {
+    color: var(--psi-text);
+    text-decoration: underline;
+}
+
+/* Tabla */
+
+.psicologo-table {
+    margin-bottom: 0;
+}
+
+.psicologo-table thead th {
+    border-bottom: 0;
+    background-color: var(--psi-primary-light);
+    color: var(--psi-text);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.psicologo-table tbody td {
+    padding-top: 15px;
+    padding-bottom: 15px;
+    border-color: rgba(101, 113, 102, 0.1);
+}
+
+.psicologo-table tbody tr:hover {
+    background-color: rgba(218, 235, 227, 0.24);
+}
+
+.psicologo-patient-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    background-color: var(--psi-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.psicologo-status {
+    display: inline-flex;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.status-programada {
+    background-color: var(--psi-primary);
+}
+
+/* Accesos rápidos */
+
+.psicologo-quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.psicologo-quick-link {
+    min-height: 64px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background-color: rgba(218, 235, 227, 0.38);
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    color: var(--psi-text);
+    text-decoration: none;
+    transition:
+        transform 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.psicologo-quick-link:hover {
+    color: var(--psi-text);
+    background-color: rgba(218, 235, 227, 0.7);
+    transform: translateX(3px);
+}
+
+.psicologo-quick-link > div {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background-color: var(--psi-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.psicologo-quick-link span {
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+/* Sin datos */
+
+.psicologo-empty-state {
+    padding: 50px 20px;
+    text-align: center;
+}
+
+.psicologo-empty-state > i {
+    color: var(--psi-primary);
+    font-size: 3rem;
+}
+
+.psicologo-empty-state h3 {
+    margin: 15px 0 7px;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.psicologo-empty-state p {
+    margin: 0;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.85rem;
+}
+
+/* Footer */
+
+.psicologo-footer {
+    padding: 18px 30px;
+    border-top: 1px solid rgba(101, 113, 102, 0.1);
+    background-color: var(--psi-white);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.78rem;
+}
+
+/* Responsive */
+
+.psicologo-sidebar-toggle {
+    background-color: var(--psi-primary-light);
+    color: var(--psi-text);
+}
+
+.psicologo-sidebar-overlay {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .psicologo-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+
+    .psicologo-sidebar.show {
+        transform: translateX(0);
+    }
+
+    .psicologo-sidebar-overlay.show {
+        display: block;
+        background-color: rgba(0, 0, 0, 0.28);
+        position: fixed;
+        inset: 0;
+        z-index: 950;
+    }
+
+    .psicologo-main {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .psicologo-content {
+        padding: 24px 18px;
+    }
+
+    .psicologo-navbar {
+        padding: 14px 18px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .psicologo-navbar-title {
+        display: none;
+    }
+
+    .psicologo-panel {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .psicologo-panel-header {
+        flex-direction: column;
+    }
+
+    .psicologo-footer {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
