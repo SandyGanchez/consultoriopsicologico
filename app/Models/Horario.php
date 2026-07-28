@@ -7,6 +7,12 @@ use PDO;
 
 class Horario extends Model
 {
+    /*
+    =====================================
+            HORARIOS DEL PSICÓLOGO
+    =====================================
+    */
+
     public function obtenerPorPsicologo(
         string $clvPsi
     ): array {
@@ -30,8 +36,10 @@ class Horario extends Model
                     'MIERCOLES',
                     'JUEVES',
                     'VIERNES',
-                    'SABADO'
-                )";
+                    'SABADO',
+                    'DOMINGO'
+                ),
+                HoraInicio";
 
         $stmt = $this->db->prepare($sql);
 
@@ -42,6 +50,13 @@ class Horario extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
+    /*
+    =====================================
+            HORARIO DE UN DÍA
+    =====================================
+    */
+
     public function obtenerHorarioDia(
         string $clvPsi,
         string $diaSemana
@@ -50,14 +65,19 @@ class Horario extends Model
         $sql = "SELECT
 
                     ClvHorario,
+                    DiaSemana,
                     HoraInicio,
                     HoraFin
 
                 FROM horario
 
                 WHERE ClvPsi = :clvPsi
+
                   AND DiaSemana = :diaSemana
+
                   AND EstatusHorario = 'ACTIVO'
+
+                ORDER BY HoraInicio
 
                 LIMIT 1";
 
@@ -65,13 +85,20 @@ class Horario extends Model
 
         $stmt->execute([
             'clvPsi' => $clvPsi,
-            'diaSemana' => strtoupper($diaSemana)
+            'diaSemana' => strtoupper(trim($diaSemana))
         ]);
 
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $resultado ?: null;
     }
+
+
+    /*
+    =====================================
+        VERIFICAR SI TRABAJA ESE DÍA
+    =====================================
+    */
 
     public function psicologoTrabaja(
         string $clvPsi,
@@ -83,16 +110,60 @@ class Horario extends Model
                 FROM horario
 
                 WHERE ClvPsi = :clvPsi
+
                   AND DiaSemana = :diaSemana
+
                   AND EstatusHorario = 'ACTIVO'";
 
         $stmt = $this->db->prepare($sql);
 
         $stmt->execute([
             'clvPsi' => $clvPsi,
-            'diaSemana' => strtoupper($diaSemana)
+            'diaSemana' => strtoupper(trim($diaSemana))
         ]);
 
-        return (int)$stmt->fetchColumn() > 0;
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+
+    /*
+    =====================================
+        OBTENER HORARIOS DEL DÍA
+    =====================================
+    
+    Permite obtener directamente el rango
+    de trabajo del psicólogo para un día.
+    */
+
+    public function obtenerHorariosDelDia(
+        string $clvPsi,
+        string $diaSemana
+    ): array {
+
+        $sql = "SELECT
+
+                    ClvHorario,
+                    DiaSemana,
+                    HoraInicio,
+                    HoraFin
+
+                FROM horario
+
+                WHERE ClvPsi = :clvPsi
+
+                  AND DiaSemana = :diaSemana
+
+                  AND EstatusHorario = 'ACTIVO'
+
+                ORDER BY HoraInicio";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'clvPsi' => $clvPsi,
+            'diaSemana' => strtoupper(trim($diaSemana))
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

@@ -76,12 +76,12 @@ class Cita extends Model
     }
 
     /*
-    =====================================
-            MIS CITAS
-    =====================================
-    */
+=====================================
+        MIS CITAS
+=====================================
+*/
 
-    public function obtenerMisCitas(
+public function obtenerMisCitas(
     string $clvPac
 ): array {
 
@@ -108,44 +108,32 @@ class Cita extends Model
             FROM cita c
 
             INNER JOIN psicologo p
-
-                ON c.ClvPsi=p.ClvPsi
+                ON c.ClvPsi = p.ClvPsi
 
             INNER JOIN usuario u
-
-                ON p.ClvUsu=u.ClvUsu
+                ON p.ClvUsu = u.ClvUsu
 
             INNER JOIN persona per
-
-                ON u.ClvPer=per.ClvPer
+                ON u.ClvPer = per.ClvPer
 
             INNER JOIN servicios s
-
-                ON c.ClvServ=s.ClvServ
+                ON c.ClvServ = s.ClvServ
 
             WHERE
 
-                c.ClvPac=:clvPac
-
-                AND c.EstadoCita IN(
-
-                    'PROGRAMADA',
-
-                    'ASISTIDA'
-
-                )
+                c.ClvPac = :clvPac
 
             ORDER BY
 
-                c.FechaCita,
+                c.FechaCita DESC,
 
-                c.HraInicioCita";
+                c.HraInicioCita DESC";
 
-    $stmt=$this->db->prepare($sql);
+    $stmt = $this->db->prepare($sql);
 
     $stmt->execute([
 
-        'clvPac'=>$clvPac
+        'clvPac' => $clvPac
 
     ]);
 
@@ -241,7 +229,7 @@ class Cita extends Model
 
                     AND EstadoCita='PROGRAMADA'";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare($sql); 
 
         $stmt->execute([
 
@@ -452,16 +440,13 @@ public function guardar(array $datos): void
     */
 
     public function cancelar(
+    string $clvCita,
+    string $motivo
+): void {
 
-        string $clvCita,
+    $sql = "UPDATE cita
 
-        string $motivo
-
-    ): void {
-
-        $sql="UPDATE cita
-
-              SET
+            SET
 
                 EstadoCita='CANCELADA',
 
@@ -469,21 +454,29 @@ public function guardar(array $datos): void
 
                 FechaCancelacion=NOW()
 
-              WHERE
+            WHERE
 
                 ClvCita=:clv";
 
-        $stmt=$this->db->prepare($sql);
+    $stmt = $this->db->prepare($sql);
 
-        $stmt->execute([
+    $stmt->execute([
 
-            'motivo'=>$motivo,
+        'motivo' => $motivo,
 
-            'clv'=>$clvCita
+        'clv' => $clvCita
 
-        ]);
+    ]);
+
+    if ($stmt->rowCount() === 0) {
+
+        throw new RuntimeException(
+            'No fue posible cancelar la cita.'
+        );
 
     }
+
+}
 
     /*
 =====================================

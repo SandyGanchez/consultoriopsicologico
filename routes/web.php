@@ -87,6 +87,11 @@ return [
     'agendar'
 ],
 
+'/paciente/horarios-disponibles' => [
+    PacienteController::class,
+    'horariosDisponibles'
+],
+
 '/paciente/historial' => [
     PacienteController::class,
     'historial'
@@ -209,11 +214,14 @@ return [
             'updateRecoveredPassword'
         ],
 
-            '/paciente/agendar' => [
+            '/paciente/guardar-cita' => [
     PacienteController::class,
     'guardarCita'
 ],
-
+'/paciente/cancelar-cita' => [
+    PacienteController::class,
+    'cancelarCita'
+],
     ]
 
 ];
