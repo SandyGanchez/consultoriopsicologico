@@ -1,0 +1,564 @@
+/*=====================================
+=            PALETA                  =
+=====================================*/
+
+:root{
+
+    --verde1:#EDF7F1;
+    --verde2:#E3F2E8;
+    --verde3:#6BAF92;
+    --verde4:#4F8F75;
+
+    --beige:#FBF8F4;
+
+    --gris:#F7F9FA;
+
+    --texto:#55626A;
+
+    --titulo:#3D6657;
+
+    --sombra:0 10px 25px rgba(0,0,0,.08);
+
+    --radio:20px;
+
+}
+
+/*=====================================
+=            GENERAL                 =
+=====================================*/
+
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+
+}
+
+body{
+
+    background:var(--gris);
+
+    color:var(--texto);
+
+    font-family:'Segoe UI',sans-serif;
+
+}
+
+/*=====================================
+=             LAYOUT                 =
+=====================================*/
+
+.paciente-layout{
+
+    display:flex;
+
+    min-height:100vh;
+
+}
+
+.paciente-main{
+
+    flex:1;
+
+    display:flex;
+
+    flex-direction:column;
+
+    min-width:0;
+
+}
+
+.paciente-content{
+
+    flex:1;
+
+    padding:35px;
+
+}
+
+/*=====================================
+=             SIDEBAR                =
+=====================================*/
+
+.sidebar-paciente{
+
+    width:270px;
+
+    background:linear-gradient(
+        180deg,
+        #F2FAF5 0%,
+        #E8F5EC 100%
+    );
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:space-between;
+
+    padding:24px;
+
+    border-right:1px solid #DCEFE2;
+
+    box-shadow:6px 0 20px rgba(0,0,0,.05);
+
+}
+
+/*----------- Logo -----------*/
+
+.sidebar-header{
+
+    text-align:center;
+
+}
+
+.sidebar-logo{
+
+    width:90px;
+
+    height:90px;
+
+    object-fit:contain;
+
+    background:white;
+
+    padding:12px;
+
+    border-radius:50%;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+
+    margin-bottom:15px;
+
+}
+
+.sidebar-header h5{
+
+    color:var(--titulo);
+
+    font-size:22px;
+
+    font-weight:700;
+
+}
+
+/*----------- Usuario -----------*/
+
+.sidebar-user{
+
+    background:white;
+
+    border-radius:18px;
+
+    padding:18px;
+
+    text-align:center;
+
+    margin:28px 0;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.06);
+
+}
+
+.sidebar-user i{
+
+    font-size:65px;
+
+    color:var(--verde4);
+
+}
+
+.sidebar-user span{
+
+    display:block;
+
+    margin-top:12px;
+
+    color:var(--titulo);
+
+    font-weight:700;
+
+}
+
+/*----------- Menú -----------*/
+
+.sidebar-menu{
+
+    list-style:none;
+
+    padding:0;
+
+    margin:0;
+
+}
+
+.sidebar-menu li{
+
+    margin-bottom:8px;
+
+}
+
+.sidebar-menu a{
+
+    position:relative;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:14px;
+
+    padding:14px 18px;
+
+    border-radius:14px;
+
+    color:var(--texto);
+
+    text-decoration:none;
+
+    font-weight:500;
+
+    transition:.30s;
+
+}
+
+.sidebar-menu a i{
+
+    font-size:20px;
+
+    color:var(--verde4);
+
+    transition:.30s;
+
+}
+
+.sidebar-menu a:hover{
+
+    background:white;
+
+    color:var(--titulo);
+
+    transform:translateX(6px);
+
+    box-shadow:0 6px 15px rgba(0,0,0,.05);
+
+}
+
+.sidebar-menu a:hover::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:0;
+
+    top:8px;
+
+    bottom:8px;
+
+    width:5px;
+
+    border-radius:20px;
+
+    background:var(--verde4);
+
+}
+
+/*----------- Footer -----------*/
+
+.sidebar-footer{
+
+    margin-top:30px;
+
+}
+
+.sidebar-footer .btn{
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:12px;
+
+    font-weight:600;
+
+    background:#E96A6A;
+
+}
+
+.sidebar-footer .btn:hover{
+
+    background:#D95656;
+
+}
+
+/*=====================================
+=             NAVBAR                 =
+=====================================*/
+
+.navbar-paciente{
+
+    height:80px;
+
+    background:#FFFFFF;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:0 35px;
+
+    box-shadow:0 2px 10px rgba(0,0,0,.05);
+
+}
+
+/*=====================================
+=            TARJETAS                =
+=====================================*/
+
+.card{
+
+    border:none!important;
+
+    border-radius:var(--radio);
+
+    overflow:hidden;
+
+    box-shadow:var(--sombra);
+
+    background:#FFFFFF;
+
+    transition:.25s;
+
+}
+
+.card:hover{
+
+    transform:translateY(-4px);
+
+}
+
+/*=====================================
+=        TARJETA BIENVENIDA          =
+=====================================*/
+
+.paciente-card-header{
+
+    background:linear-gradient(
+        135deg,
+        var(--verde1),
+        var(--verde2)
+    );
+
+    color:var(--titulo);
+
+}
+
+.paciente-card-header h2{
+
+    font-weight:700;
+
+}
+
+.paciente-card-header p{
+
+    margin-top:10px;
+
+}
+
+/*=====================================
+=        TITULOS TARJETAS            =
+=====================================*/
+
+.paciente-card-title{
+
+    background:var(--beige)!important;
+
+    color:var(--titulo)!important;
+
+    font-size:18px;
+
+    font-weight:700;
+
+}
+
+/*=====================================
+=            ICONOS                 =
+=====================================*/
+
+.bi{
+
+    color:var(--verde4);
+
+}
+
+.card-header i{
+
+    color:var(--verde4);
+
+}
+
+/*=====================================
+=             TEXTOS                 =
+=====================================*/
+
+h5{
+
+    color:var(--titulo);
+
+    font-weight:700;
+
+}
+
+strong{
+
+    color:var(--titulo);
+
+}
+
+small{
+
+    color:#7D8B91;
+
+}
+
+/*=====================================
+=          FRASE DEL DIA             =
+=====================================*/
+
+blockquote{
+
+    color:#648476;
+
+    font-size:20px;
+
+    font-style:italic;
+
+}
+
+/*=====================================
+=             FOOTER                 =
+=====================================*/
+
+.footer-paciente{
+
+    background:#FFFFFF;
+
+    border-top:1px solid #ECECEC;
+
+    padding:15px;
+
+    text-align:center;
+
+}
+
+/*=====================================
+=           BOTONES                 =
+=====================================*/
+
+.btn-danger{
+
+    border:none;
+
+    border-radius:14px;
+
+}
+
+/*=====================================
+=            RESPONSIVE              =
+=====================================*/
+
+@media(max-width:992px){
+
+.sidebar-paciente{
+
+width:220px;
+
+}
+
+}
+
+@media(max-width:768px){
+
+.paciente-layout{
+
+flex-direction:column;
+
+}
+
+.sidebar-paciente{
+
+width:100%;
+
+}
+
+.paciente-content{
+
+padding:20px;
+
+}
+
+/*=====================================
+=           MIS CITAS               =
+=====================================*/
+
+.paciente-cita-card{
+
+    transition:.25s;
+
+}
+
+.paciente-cita-card:hover{
+
+    transform:translateY(-6px);
+
+}
+
+.paciente-cita-card .badge{
+
+    font-size:.80rem;
+
+    padding:8px 12px;
+
+    border-radius:50px;
+
+}
+
+.paciente-cita-card small{
+
+    display:block;
+
+    margin-bottom:5px;
+
+    color:#8B8B8B;
+
+}
+
+.paciente-cita-card h5{
+
+    margin-bottom:0;
+
+}
+
+.paciente-cita-card .card-footer{
+
+    padding:20px;
+
+}
+
+.paciente-cita-card .btn{
+
+    border-radius:12px;
+
+}
+
+.display-1{
+
+    color:var(--verde3);
+
+}
+
+}

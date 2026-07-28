@@ -4,215 +4,561 @@ namespace App\Models;
 
 use App\Core\Model;
 use PDO;
+use RuntimeException;
 
 class Cita extends Model
 {
-    public function obtenerPorConsultorio(
-        string $clvCons,
-        ?string $clvPsi = null,
-        ?string $estado = null
-    ): array {
+
+    /*
+    =====================================
+            PRÓXIMA CITA
+    =====================================
+    */
+
+    public function obtenerProximaCitaPaciente(
+        string $clvPac
+    ): ?array {
+
         $sql = "SELECT
-                    c.ClvCita,
-                    c.FechaCita,
-                    c.HraInicioCita,
-                    c.HraFinCita,
-                    c.EstadoCita,
-                    c.NotasCita,
-                    c.MotivoCancelacion,
-                    c.FechaCancelacion,
-                    c.ClvPac,
-                    c.ClvPsi,
-                    c.ClvServ,
+
+                    c.*,
 
                     CONCAT(
-                        perPac.NombrePer,
+                        per.NombrePer,
                         ' ',
-                        perPac.ApPatPer,
+                        per.ApPatPer,
                         ' ',
-                        COALESCE(perPac.ApMatPer, '')
-                    ) AS NombrePaciente,
-
-                    CONCAT(
-                        perPsi.NombrePer,
-                        ' ',
-                        perPsi.ApPatPer,
-                        ' ',
-                        COALESCE(perPsi.ApMatPer, '')
+                        per.ApMatPer
                     ) AS NombrePsicologo,
 
                     s.NombreServicio
 
                 FROM cita c
 
-                INNER JOIN paciente pac
-                    ON c.ClvPac = pac.ClvPac
+                INNER JOIN psicologo p
+                    ON c.ClvPsi = p.ClvPsi
 
-                INNER JOIN usuario usuPac
-                    ON pac.ClvUsu = usuPac.ClvUsu
+                INNER JOIN usuario u
+                    ON p.ClvUsu = u.ClvUsu
 
-                INNER JOIN persona perPac
-                    ON usuPac.ClvPer = perPac.ClvPer
-
-                INNER JOIN psicologo psi
-                    ON c.ClvPsi = psi.ClvPsi
-
-                INNER JOIN usuario usuPsi
-                    ON psi.ClvUsu = usuPsi.ClvUsu
-
-                INNER JOIN persona perPsi
-                    ON usuPsi.ClvPer = perPsi.ClvPer
+                INNER JOIN persona per
+                    ON u.ClvPer = per.ClvPer
 
                 INNER JOIN servicios s
                     ON c.ClvServ = s.ClvServ
 
-                WHERE c.ClvCons = :clvCons";
+                WHERE
 
-        $parametros = [
-            'clvCons' => $clvCons
-        ];
+                    c.ClvPac = :clvPac
 
-        if ($clvPsi !== null && $clvPsi !== '') {
-            $sql .= " AND c.ClvPsi = :clvPsi";
-            $parametros['clvPsi'] = $clvPsi;
-        }
+                    AND c.EstadoCita = 'PROGRAMADA'
 
-        if ($estado !== null && $estado !== '') {
-            $sql .= " AND c.EstadoCita = :estado";
-            $parametros['estado'] = $estado;
-        }
+                    AND c.FechaCita >= CURDATE()
 
-        $sql .= " ORDER BY c.FechaCita, c.HraInicioCita";
+                ORDER BY
+
+                    c.FechaCita,
+
+                    c.HraInicioCita
+
+                LIMIT 1";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($parametros);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute([
+            'clvPac'=>$clvPac
+        ]);
+
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $resultado ?: null;
+
     }
-    public function contarPacientesActivos(
-    string $clvPsi
-): int {
-    $sql = "SELECT COUNT(DISTINCT ClvPac)
-            FROM cita
-            WHERE ClvPsi = :clvPsi
-              AND EstadoCita <> 'CANCELADA'";
 
-    $stmt = $this->db->prepare($sql);
+    /*
+    =====================================
+            MIS CITAS
+    =====================================
+    */
 
-    $stmt->execute([
-        'clvPsi' => $clvPsi
-    ]);
-
-    return (int) $stmt->fetchColumn();
-}
-   public function contarCitasHoy(
-    string $clvPsi
-): int {
-    $sql = "SELECT COUNT(*)
-            FROM cita
-            WHERE ClvPsi = :clvPsi
-              AND FechaCita = CURDATE()
-              AND EstadoCita = 'PROGRAMADA'";
-
-    $stmt = $this->db->prepare($sql);
-
-    $stmt->execute([
-        'clvPsi' => $clvPsi
-    ]);
-
-    return (int) $stmt->fetchColumn();
-}
-public function contarCitasSemana(
-    string $clvPsi
-): int {
-    $sql = "SELECT COUNT(*)
-            FROM cita
-            WHERE ClvPsi = :clvPsi
-              AND YEARWEEK(
-                    FechaCita,
-                    1
-                  ) = YEARWEEK(
-                    CURDATE(),
-                    1
-                  )
-              AND EstadoCita = 'PROGRAMADA'";
-
-    $stmt = $this->db->prepare($sql);
-
-    $stmt->execute([
-        'clvPsi' => $clvPsi
-    ]);
-
-    return (int) $stmt->fetchColumn();
-}
-public function obtenerProximasCitas(
-    string $clvPsi,
-    int $limite = 5
+    public function obtenerMisCitas(
+    string $clvPac
 ): array {
+
     $sql = "SELECT
-                c.ClvCita,
-                c.FechaCita,
-                c.HraInicioCita,
-                c.HraFinCita,
-                c.EstadoCita,
-                c.NotasCita,
+
+                c.*,
 
                 CONCAT(
-                    per.NombrePer,
-                    ' ',
-                    per.ApPatPer,
-                    ' ',
-                    per.ApMatPer
-                ) AS NombrePaciente,
 
-                ser.NombreServicio
+                    per.NombrePer,
+
+                    ' ',
+
+                    per.ApPatPer,
+
+                    ' ',
+
+                    per.ApMatPer
+
+                ) AS NombrePsicologo,
+
+                s.NombreServicio
 
             FROM cita c
 
-            INNER JOIN paciente pac
-                ON c.ClvPac = pac.ClvPac
+            INNER JOIN psicologo p
 
-            INNER JOIN usuario usu
-                ON pac.ClvUsu = usu.ClvUsu
+                ON c.ClvPsi=p.ClvPsi
+
+            INNER JOIN usuario u
+
+                ON p.ClvUsu=u.ClvUsu
 
             INNER JOIN persona per
-                ON usu.ClvPer = per.ClvPer
 
-            INNER JOIN servicios ser
-                ON c.ClvServ = ser.ClvServ
+                ON u.ClvPer=per.ClvPer
 
-            WHERE c.ClvPsi = :clvPsi
-              AND c.EstadoCita = 'PROGRAMADA'
-              AND (
-                    c.FechaCita > CURDATE()
-                    OR (
-                        c.FechaCita = CURDATE()
-                        AND c.HraInicioCita >= CURTIME()
-                    )
-              )
+            INNER JOIN servicios s
+
+                ON c.ClvServ=s.ClvServ
+
+            WHERE
+
+                c.ClvPac=:clvPac
+
+                AND c.EstadoCita IN(
+
+                    'PROGRAMADA',
+
+                    'ASISTIDA'
+
+                )
 
             ORDER BY
-                c.FechaCita ASC,
-                c.HraInicioCita ASC
 
-            LIMIT :limite";
+                c.FechaCita,
+
+                c.HraInicioCita";
+
+    $stmt=$this->db->prepare($sql);
+
+    $stmt->execute([
+
+        'clvPac'=>$clvPac
+
+    ]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+}
+
+    /*
+    =====================================
+            HISTORIAL
+    =====================================
+    */
+
+    public function obtenerHistorial(
+        string $clvPac
+    ): array {
+
+        $sql = "SELECT
+
+                    c.*,
+
+                    CONCAT(
+                        per.NombrePer,
+                        ' ',
+                        per.ApPatPer,
+                        ' ',
+                        per.ApMatPer
+                    ) AS NombrePsicologo,
+
+                    s.NombreServicio
+
+                FROM cita c
+
+                INNER JOIN psicologo p
+                    ON c.ClvPsi = p.ClvPsi
+
+                INNER JOIN usuario u
+                    ON p.ClvUsu = u.ClvUsu
+
+                INNER JOIN persona per
+                    ON u.ClvPer = per.ClvPer
+
+                INNER JOIN servicios s
+                    ON c.ClvServ = s.ClvServ
+
+                WHERE
+
+                    c.ClvPac=:clvPac
+
+                    AND c.EstadoCita<>'PROGRAMADA'
+
+                ORDER BY
+
+                    c.FechaCita DESC,
+
+                    c.HraInicioCita DESC";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'clvPac'=>$clvPac
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    }
+
+    /*
+    =====================================
+            HORAS OCUPADAS
+    =====================================
+    */
+
+    public function obtenerHorasOcupadas(
+
+        string $clvPsi,
+
+        string $fecha
+
+    ): array {
+
+        $sql = "SELECT
+
+                    HraInicioCita
+
+                FROM cita
+
+                WHERE
+
+                    ClvPsi=:clvPsi
+
+                    AND FechaCita=:fecha
+
+                    AND EstadoCita='PROGRAMADA'";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+
+            'clvPsi'=>$clvPsi,
+
+            'fecha'=>$fecha
+
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    }
+
+    /*
+=====================================
+      VALIDAR HORARIO OCUPADO
+=====================================
+*/
+
+public function existeCitaEnHorario(
+
+    string $clvPsi,
+
+    string $fecha,
+
+    string $hora
+
+): bool {
+
+    $sql = "SELECT COUNT(*)
+
+            FROM cita
+
+            WHERE
+
+                ClvPsi = :clvPsi
+
+                AND FechaCita = :fecha
+
+                AND HraInicioCita = :hora
+
+                AND EstadoCita = 'PROGRAMADA'";
 
     $stmt = $this->db->prepare($sql);
 
-    $stmt->bindValue(
-        ':clvPsi',
-        $clvPsi,
-        PDO::PARAM_STR
-    );
+    $stmt->execute([
 
-    $stmt->bindValue(
-        ':limite',
-        $limite,
-        PDO::PARAM_INT
-    );
+        'clvPsi' => $clvPsi,
 
-    $stmt->execute();
+        'fecha' => $fecha,
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        'hora' => $hora
+
+    ]);
+
+    return (int)$stmt->fetchColumn() > 0;
+
 }
+
+    /*
+    =====================================
+            PACIENTE TIENE CITA
+    =====================================
+    */
+
+public function pacienteTieneCita(
+
+    string $clvPac,
+
+    string $fecha,
+
+    string $hora
+
+): bool {
+
+    $sql="SELECT COUNT(*)
+
+          FROM cita
+
+          WHERE
+
+            ClvPac=:paciente
+
+            AND FechaCita=:fecha
+
+            AND HraInicioCita=:hora
+
+            AND EstadoCita='PROGRAMADA'";
+
+    $stmt=$this->db->prepare($sql);
+
+    $stmt->execute([
+
+        'paciente'=>$clvPac,
+
+        'fecha'=>$fecha,
+
+        'hora'=>$hora
+
+    ]);
+
+    return (int)$stmt->fetchColumn()>0;
+
+}
+
+    /*
+    =====================================
+            GUARDAR CITA
+    =====================================
+    */
+
+public function guardar(array $datos): void
+{
+
+    if (
+        $this->pacienteTieneCita(
+            $datos['paciente'],
+            $datos['fecha'],
+            $datos['inicio']
+        )
+    ) {
+
+        throw new RuntimeException(
+            'Ya tienes una cita registrada en ese horario.'
+        );
+
+    }
+
+    if (
+        $this->existeCitaEnHorario(
+            $datos['psicologo'],
+            $datos['fecha'],
+            $datos['inicio']
+        )
+    ) {
+
+        throw new RuntimeException(
+            'Ese horario ya fue ocupado.'
+        );
+
+    }
+
+    $sql = "INSERT INTO cita(
+
+                ClvCita,
+                FechaCita,
+                HraInicioCita,
+                HraFinCita,
+                DuracionAplicadaMin,
+                CostoAplicado,
+                EstadoCita,
+                ClvPac,
+                ClvPsi,
+                ClvCons,
+                ClvServ
+
+            )
+
+            VALUES(
+
+                :clv,
+                :fecha,
+                :inicio,
+                :fin,
+                :duracion,
+                :costo,
+                'PROGRAMADA',
+                :paciente,
+                :psicologo,
+                :consultorio,
+                :servicio
+
+            )";
+
+    try {
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+
+            'clv'          => $this->generarClave(),
+            'fecha'        => $datos['fecha'],
+            'inicio'       => $datos['inicio'],
+            'fin'          => $datos['fin'],
+            'duracion'     => $datos['duracion'],
+            'costo'        => $datos['costo'],
+            'paciente'     => $datos['paciente'],
+            'psicologo'    => $datos['psicologo'],
+            'consultorio'  => $datos['consultorio'],
+            'servicio'     => $datos['servicio']
+
+        ]);
+
+    } catch (\Throwable $e) {
+
+        throw new RuntimeException(
+            'No fue posible registrar la cita.'
+        );
+
+    }
+
+}
+
+    /*
+    =====================================
+            CANCELAR
+    =====================================
+    */
+
+    public function cancelar(
+
+        string $clvCita,
+
+        string $motivo
+
+    ): void {
+
+        $sql="UPDATE cita
+
+              SET
+
+                EstadoCita='CANCELADA',
+
+                MotivoCancelacion=:motivo,
+
+                FechaCancelacion=NOW()
+
+              WHERE
+
+                ClvCita=:clv";
+
+        $stmt=$this->db->prepare($sql);
+
+        $stmt->execute([
+
+            'motivo'=>$motivo,
+
+            'clv'=>$clvCita
+
+        ]);
+
+    }
+
+    /*
+=====================================
+        OBTENER UNA CITA
+=====================================
+*/
+
+public function obtenerPorClave(
+
+    string $clvCita
+
+): ?array {
+
+    $sql = "SELECT *
+
+            FROM cita
+
+            WHERE ClvCita = :clv
+
+            LIMIT 1";
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->execute([
+
+        'clv' => $clvCita
+
+    ]);
+
+    $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $resultado ?: null;
+
+}
+
+    /*
+    =====================================
+            GENERAR CLAVE
+    =====================================
+    */
+
+    private function generarClave(): string {
+
+        $sql="SELECT
+
+                MAX(
+
+                    CAST(
+
+                        SUBSTRING(ClvCita,4)
+
+                        AS UNSIGNED
+
+                    )
+
+                )
+
+                FROM cita";
+
+        $ultimo=(int)$this->db
+            ->query($sql)
+            ->fetchColumn();
+
+        return 'CIT'.str_pad(
+
+            (string)($ultimo+1),
+
+            3,
+
+            '0',
+
+            STR_PAD_LEFT
+
+        );
+
+    }
+
 }

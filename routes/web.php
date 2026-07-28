@@ -77,6 +77,30 @@ return [
             PacienteController::class,
             'dashboard'
         ],
+        '/paciente/mis-citas' => [
+    PacienteController::class,
+    'misCitas'
+],
+
+'/paciente/agendar' => [
+    PacienteController::class,
+    'agendar'
+],
+
+'/paciente/historial' => [
+    PacienteController::class,
+    'historial'
+],
+
+'/paciente/perfil' => [
+    PacienteController::class,
+    'perfil'
+],
+
+'/paciente/notificaciones' => [
+    PacienteController::class,
+    'notificaciones'
+],
         '/psicologo/servicios' => [
     PsicologoController::class,
     'servicios'
@@ -183,7 +207,12 @@ return [
         '/new-password' => [
             AuthController::class,
             'updateRecoveredPassword'
-        ]
+        ],
+
+            '/paciente/agendar' => [
+    PacienteController::class,
+    'guardarCita'
+],
 
     ]
 

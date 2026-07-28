@@ -39,4 +39,25 @@ class Paciente extends Model
 
         ]);
     }
+
+public function obtenerPorUsuario(string $clvUsu): ?array
+{
+    $sql = "SELECT *
+
+            FROM paciente
+
+            WHERE ClvUsu = :clvUsu
+
+            LIMIT 1";
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->execute([
+        'clvUsu' => $clvUsu
+    ]);
+
+    $paciente = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+    return $paciente ?: null;
+}
 }

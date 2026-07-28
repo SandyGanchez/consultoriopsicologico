@@ -1,5 +1,8 @@
 <?php
 
+setlocale(LC_TIME, 'es_MX.UTF-8', 'es_MX', 'spanish');
+date_default_timezone_set('America/Mexico_City');
+
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Config\Config;
