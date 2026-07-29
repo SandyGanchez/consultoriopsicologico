@@ -97,6 +97,11 @@ return [
     'historial'
 ],
 
+'/paciente/cita-detalle' => [
+    PacienteController::class,
+    'detalleCita'
+],
+
 '/paciente/perfil' => [
     PacienteController::class,
     'perfil'
@@ -221,6 +226,11 @@ return [
 '/paciente/cancelar-cita' => [
     PacienteController::class,
     'cancelarCita'
+],
+
+'/paciente/perfil/actualizar' => [
+    PacienteController::class,
+    'actualizarPerfil'
 ],
     ]
 

@@ -60,4 +60,148 @@ public function obtenerPorUsuario(string $clvUsu): ?array
 
     return $paciente ?: null;
 }
+
+/*
+=====================================
+    OBTENER PERFIL COMPLETO
+=====================================
+*/
+
+public function obtenerPerfilCompleto(
+    string $clvUsu
+): ?array {
+
+    $sql = "SELECT
+
+                p.ClvPac,
+                p.FotoPerfilPac,
+                p.EstadoActivoPac,
+
+                u.ClvUsu,
+                u.CorreoUsu,
+                u.TelefonoUsu,
+
+                per.ClvPer,
+                per.NombrePer,
+                per.ApPatPer,
+                per.ApMatPer,
+                per.FechaNacimiento,
+                per.GeneroPer,
+                per.FotoPerfilPer
+
+            FROM paciente p
+
+            INNER JOIN usuario u
+                ON p.ClvUsu = u.ClvUsu
+
+            INNER JOIN persona per
+                ON u.ClvPer = per.ClvPer
+
+            WHERE
+
+                p.ClvUsu = :clvUsu
+
+            LIMIT 1";
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->execute([
+
+        'clvUsu' => $clvUsu
+
+    ]);
+
+    $perfil = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+    return $perfil ?: null;
+
+}
+
+/*
+=====================================
+        ACTUALIZAR PERFIL
+=====================================
+*/
+
+public function actualizarPerfil(array $datos): bool
+{
+    try {
+
+        $this->db->beginTransaction();
+
+        /*
+        ===============================
+            ACTUALIZAR PERSONA
+        ===============================
+        */
+
+        $sqlPersona = "
+
+            UPDATE persona
+
+            SET
+
+                NombrePer = ?,
+                ApPatPer = ?,
+                ApMatPer = ?,
+                FechaNacimiento = ?,
+                GeneroPer = ?
+
+            WHERE ClvPer = ?
+
+        ";
+
+        $stmt = $this->db->prepare($sqlPersona);
+
+        $stmt->execute([
+
+            $datos['NombrePer'],
+            $datos['ApPatPer'],
+            $datos['ApMatPer'],
+            $datos['FechaNacimiento'],
+            $datos['GeneroPer'],
+            $datos['ClvPer']
+
+        ]);
+
+        /*
+        ===============================
+            ACTUALIZAR USUARIO
+        ===============================
+        */
+
+        $sqlUsuario = "
+
+            UPDATE usuario
+
+            SET
+
+                CorreoUsu = ?,
+                TelefonoUsu = ?
+
+            WHERE ClvUsu = ?
+
+        ";
+
+        $stmt = $this->db->prepare($sqlUsuario);
+
+        $stmt->execute([
+
+            $datos['CorreoUsu'],
+            $datos['TelefonoUsu'],
+            $datos['ClvUsu']
+
+        ]);
+
+        $this->db->commit();
+
+        return true;
+
+    } catch (\Throwable $e) {
+
+        $this->db->rollBack();
+
+        return false;
+    }
+}
 }

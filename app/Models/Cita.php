@@ -512,6 +512,83 @@ public function obtenerPorClave(
 
 }
 
+/*
+=====================================
+        DETALLE DE CITA
+=====================================
+*/
+
+public function obtenerDetallePaciente(
+    string $clvCita,
+    string $clvPac
+): ?array {
+
+    $sql = "SELECT
+
+                c.*,
+
+                s.NombreServicio,
+
+                s.CostoServicio,
+
+                s.DuracionMinutos,
+
+                con.NombreCons,
+
+                CONCAT(
+
+                    per.NombrePer,
+
+                    ' ',
+
+                    per.ApPatPer,
+
+                    ' ',
+
+                    per.ApMatPer
+
+                ) AS NombrePsicologo
+
+            FROM cita c
+
+            INNER JOIN psicologo p
+                ON c.ClvPsi = p.ClvPsi
+
+            INNER JOIN usuario u
+                ON p.ClvUsu = u.ClvUsu
+
+            INNER JOIN persona per
+                ON u.ClvPer = per.ClvPer
+
+            INNER JOIN servicios s
+                ON c.ClvServ = s.ClvServ
+
+            INNER JOIN consultorio con
+                ON c.ClvCons = con.ClvCons
+
+            WHERE
+
+                c.ClvCita = :cita
+
+                AND c.ClvPac = :paciente
+
+            LIMIT 1";
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->execute([
+
+        'cita' => $clvCita,
+
+        'paciente' => $clvPac
+
+    ]);
+
+    $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $resultado ?: null;
+}
+
     /*
     =====================================
             GENERAR CLAVE

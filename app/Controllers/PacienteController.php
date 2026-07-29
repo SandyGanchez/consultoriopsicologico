@@ -842,6 +842,59 @@ class PacienteController extends Controller
         }
     }
 
+    /*
+=====================================
+        DETALLE DE CITA
+=====================================
+*/
+
+public function detalleCita(): void
+{
+    $clvCita = trim($_GET['cita'] ?? '');
+
+    if ($clvCita === '') {
+
+        Response::redirect('paciente/mis-citas');
+    }
+
+    $pacienteModel = new Paciente();
+
+    $paciente = $pacienteModel->obtenerPorUsuario(
+        $this->usuario['ClvUsu']
+    );
+
+    if (!$paciente) {
+
+        Response::redirect('paciente');
+    }
+
+    $citaModel = new Cita();
+
+    $cita = $citaModel->obtenerDetallePaciente(
+        $clvCita,
+        $paciente['ClvPac']
+    );
+
+    if (!$cita) {
+
+        $_SESSION['error'] =
+            'La cita no existe o no pertenece a tu cuenta.';
+
+        Response::redirect('paciente/mis-citas');
+    }
+
+    $this->view(
+        'paciente/detalleCita',
+        [
+            'titulo' => 'Detalle de la cita',
+
+            'usuario' => $this->usuario,
+
+            'cita' => $cita
+        ],
+        'paciente'
+    );
+}
 
     /*
     =====================================
@@ -884,36 +937,37 @@ class PacienteController extends Controller
 
 
     /*
-    =====================================
-            PERFIL
-    =====================================
-    */
+=====================================
+        PERFIL
+=====================================
+*/
 
-    public function perfil(): void
-    {
-        $pacienteModel = new Paciente();
+public function perfil(): void
+{
+    $pacienteModel = new Paciente();
 
-        $paciente =
-            $pacienteModel->obtenerPorUsuario(
-                $this->usuario['ClvUsu']
-            );
+    $perfil = $pacienteModel->obtenerPerfilCompleto(
+        $this->usuario['ClvUsu']
+    );
 
-        if (!$paciente) {
-            Response::redirect('paciente');
-        }
+    if (!$perfil) {
 
-        $this->view(
-            'paciente/perfil',
-            [
-                'titulo' => 'Mi perfil',
+        Response::redirect('paciente');
 
-                'usuario' => $this->usuario,
-
-                'paciente' => $paciente
-            ],
-            'paciente'
-        );
     }
+
+    $this->view(
+        'paciente/perfil',
+        [
+            'titulo' => 'Mi perfil',
+
+            'usuario' => $this->usuario,
+
+            'perfil' => $perfil
+        ],
+        'paciente'
+    );
+}
 
 
     /*
