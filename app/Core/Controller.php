@@ -9,12 +9,15 @@ class Controller
         array $data = [],
         string $layout = 'master'
     ): void {
-        extract($data);
+        extract($data, EXTR_SKIP);
 
-        $content = dirname(__DIR__) . "/Views/$view.php";
+        $content =
+            dirname(__DIR__)
+            . "/Views/$view.php";
 
         $layoutFile =
-            dirname(__DIR__) . "/Views/layouts/$layout.php";
+            dirname(__DIR__)
+            . "/Views/layouts/$layout.php";
 
         if (!file_exists($content)) {
             throw new \RuntimeException(

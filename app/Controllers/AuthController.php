@@ -25,6 +25,9 @@ class AuthController extends Controller
             if ($usuario['RolUsu'] === 'CONSULTORIO') {
     Response::redirect('consultorio');
 }
+if ($usuario['RolUsu'] === 'ADMINISTRADOR') {
+    Response::redirect('administrador');
+}
         }
 
         $consultorio = new Consultorio();
@@ -74,48 +77,78 @@ public function saveTemporaryPassword(): void
         ]);
     }
 
-    public function autenticar()
-    {
-        $correo = trim($_POST['correo'] ?? '');
-        $password = $_POST['password'] ?? '';
+   public function autenticar(): void
+{
+    $correo = trim($_POST['correo'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-        if ($correo === '' || $password === '') {
-            Session::set(
-                'error',
-                'Debe ingresar correo y contraseña.'
-            );
+    if ($correo === '' || $password === '') {
+        Session::set(
+            'error',
+            'Debe ingresar correo y contraseña.'
+        );
 
-            Response::redirect('login');
-        }
-
-        $service = new AuthService();
-
-        $usuario = $service->login($correo, $password);
-
-        if (!$usuario) {
-            Session::set(
-                'error',
-                'Correo o contraseña incorrectos.'
-            );
-
-            Response::redirect('login');
-        }
-
-        Session::set('usuario', $usuario);
-
-        if ($usuario['RolUsu'] === 'PACIENTE') {
-            Response::redirect('paciente');
-        }
-
-        if ($usuario['RolUsu'] === 'PSICOLOGO') {
-            Response::redirect('psicologo');
-        }
-        if ($usuario['RolUsu'] === 'CONSULTORIO') {
-    Response::redirect('consultorio');
-}
-
-        Response::redirect('');
+        Response::redirect('login');
+        return;
     }
+
+    $service = new AuthService();
+
+    $usuario = $service->login(
+        $correo,
+        $password
+    );
+
+    if (!$usuario) {
+        Session::set(
+            'error',
+            'Correo o contraseña incorrectos.'
+        );
+
+        Response::redirect('login');
+        return;
+    }
+
+    Session::regenerar();
+
+    Session::set(
+        'usuario',
+        $usuario
+    );
+
+    $rol = strtoupper(
+        trim((string) ($usuario['RolUsu'] ?? ''))
+    );
+
+    if ($rol === 'ADMINISTRADOR') {
+        Response::redirect('administrador');
+        return;
+    }
+
+    if ($rol === 'PACIENTE') {
+        Response::redirect('paciente');
+        return;
+    }
+
+    if ($rol === 'PSICOLOGO') {
+        Response::redirect('psicologo');
+        return;
+    }
+
+    if ($rol === 'CONSULTORIO') {
+        Response::redirect('consultorio');
+        return;
+    }
+
+    Session::remove('usuario');
+
+    Session::set(
+        'error',
+        'El rol del usuario no es válido.'
+    );
+
+    Response::redirect('login');
+}
 
     public function guardar()
     {

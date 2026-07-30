@@ -15,38 +15,45 @@ use Throwable;
 
 class AuthService
 {
-    public function login(
-        string $correo,
-        string $password
-    ): ?array {
-        $usuarioModel = new Usuario();
+  public function login(
+    string $correo,
+    string $password
+): ?array {
+    $usuarioModel = new Usuario();
 
-        $usuario = $usuarioModel->buscarPorCorreo(
-            trim($correo)
-        );
+    $usuario = $usuarioModel->buscarPorCorreo(
+        strtolower(trim($correo))
+    );
 
-        if (!$usuario) {
-            return null;
-        }
-
-        if (
-            isset($usuario['EstadoUsu']) &&
-            (int) $usuario['EstadoUsu'] !== 1
-        ) {
-            return null;
-        }
-
-        if (
-            !password_verify(
-                $password,
-                $usuario['ContrasenaUsu']
-            )
-        ) {
-            return null;
-        }
-
-        return $usuario;
+    if (!$usuario) {
+        return null;
     }
+
+    $estadoUsuario = strtoupper(
+        trim((string) ($usuario['EstadoUsu'] ?? ''))
+    );
+
+    $usuarioActivo = in_array(
+        $estadoUsuario,
+        ['1', 'ACTIVO', 'ACTIVA'],
+        true
+    );
+
+    if (!$usuarioActivo) {
+        return null;
+    }
+
+    $hash = $usuario['ContrasenaUsu'] ?? '';
+
+    if (
+        $hash === ''
+        || !password_verify($password, $hash)
+    ) {
+        return null;
+    }
+
+    return $usuario;
+}
 
     public function registrar(array $datos): void
     {
