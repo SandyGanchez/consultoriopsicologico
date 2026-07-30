@@ -204,4 +204,40 @@ public function actualizarPerfil(array $datos): bool
         return false;
     }
 }
+
+/*
+=====================================
+    ACTUALIZAR FOTOGRAFÍA
+=====================================
+*/
+
+public function actualizarFotografia(
+    string $clvPac,
+    string $foto
+): bool
+{
+    $sql = "
+
+        UPDATE paciente
+
+        SET
+
+            FotoPerfilPac = ?
+
+        WHERE
+
+            ClvPac = ?
+
+    ";
+
+    $stmt = $this->db->prepare($sql);
+
+    return $stmt->execute([
+
+        $foto,
+
+        $clvPac
+
+    ]);
+}
 }

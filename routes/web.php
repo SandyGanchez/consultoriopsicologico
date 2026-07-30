@@ -328,10 +328,6 @@ return [
     'guardarConsultorio'
 
 ],
-'/paciente/cancelar-cita' => [
-    PacienteController::class,
-    'cancelarCita'
-],
 
 '/paciente/perfil/actualizar' => [
     PacienteController::class,
@@ -343,6 +339,17 @@ return [
     'actualizarConsultorio'
 ],
 
+
+'/paciente/cancelar-cita' => [
+    PacienteController::class,
+    'cancelarCita'
+],
+
+'/paciente/perfil/foto' => [
+    PacienteController::class,
+    'actualizarFoto'
+],
+    
 
 '/administrador/consultorios/desactivar/{id}' => [
     AdministradorController::class,

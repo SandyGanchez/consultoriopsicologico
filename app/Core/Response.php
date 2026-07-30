@@ -11,4 +11,4 @@ class Response
         header("Location: " . Helper::baseUrl($ruta));
         exit;
     }
-}
+} 

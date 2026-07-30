@@ -12,7 +12,11 @@ class App
 
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
+
     $base = '/consultorio_psicologico/public';
+
+        $base = '/consultorio_psicologico/public';
+    
 
     if (str_starts_with($uri, $base)) {
         $uri = substr($uri, strlen($base));
