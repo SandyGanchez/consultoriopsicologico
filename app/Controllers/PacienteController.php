@@ -5,7 +5,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Response;
 use App\Core\Session;
-
+use App\Helpers\Helper;
 use App\Models\Paciente;
 use App\Models\Cita;
 use App\Models\Psicologo;
@@ -840,11 +840,19 @@ public function detalleCita(): void
     }
 
 
+<<<<<<< HEAD
     /*
     =====================================
             PERFIL
     =====================================
     */
+=======
+/*
+=====================================
+        PERFIL
+=====================================
+*/
+>>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
 
     public function perfil(): void
     {
@@ -882,6 +890,7 @@ public function detalleCita(): void
             Response::redirect('paciente');
         }
 
+<<<<<<< HEAD
         $errores = Session::getFlash('perfil_errores');
         $old = Session::getFlash('perfil_old');
 
@@ -1085,10 +1094,120 @@ public function detalleCita(): void
         }
 
         Response::redirect('paciente/perfil');
+=======
+/*
+=====================================
+        ACTUALIZAR PERFIL
+=====================================
+*/
+
+public function actualizarPerfil(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    $pacienteModel = new Paciente();
+
+    $perfil = $pacienteModel->obtenerPerfilCompleto(
+        $this->usuario['ClvUsu']
+    );
+
+    if (!$perfil) {
+
+        Response::redirect('paciente');
+
+    }
+
+    $datos = [
+
+        'ClvPer' => $perfil['ClvPer'],
+
+        'ClvUsu' => $perfil['ClvUsu'],
+
+        'NombrePer' => trim($_POST['NombrePer'] ?? ''),
+
+        'ApPatPer' => trim($_POST['ApPatPer'] ?? ''),
+
+        'ApMatPer' => trim($_POST['ApMatPer'] ?? ''),
+
+        'FechaNacimiento' => trim($_POST['FechaNacimiento'] ?? ''),
+
+        'GeneroPer' => trim($_POST['GeneroPer'] ?? ''),
+
+        'CorreoUsu' => trim($_POST['CorreoUsu'] ?? ''),
+
+        'TelefonoUsu' => trim($_POST['TelefonoUsu'] ?? '')
+    ];
+
+    if (
+
+        $datos['NombrePer'] === '' ||
+
+        $datos['ApPatPer'] === '' ||
+
+        $datos['CorreoUsu'] === ''
+
+    ) {
+
+        $_SESSION['error'] =
+            'Completa los campos obligatorios.';
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    $actualizado =
+        $pacienteModel->actualizarPerfil($datos);
+
+    if ($actualizado) {
+
+        $_SESSION['success'] =
+            'Perfil actualizado correctamente.';
+
+    } else {
+
+        $_SESSION['error'] =
+            'No fue posible actualizar el perfil.';
+
+    }
+
+    Response::redirect('paciente/perfil');
+}
+
+/*
+=====================================
+        ACTUALIZAR FOTOGRAFÍA
+=====================================
+*/
+
+public function actualizarFoto(): void
+{
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    $pacienteModel = new Paciente();
+
+    $perfil = $pacienteModel->obtenerPerfilCompleto(
+        $this->usuario['ClvUsu']
+    );
+
+    if (!$perfil) {
+
+        Response::redirect('paciente');
+
+>>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
     }
 
     /*
     =====================================
+<<<<<<< HEAD
             CONFIGURACIÓN
     =====================================
     */
@@ -1296,6 +1415,193 @@ public function detalleCita(): void
         Session::setFlash('config_toast_tipo', $tipo);
         Session::setFlash('config_toast_mensaje', $mensaje);
     }
+=======
+            VALIDAR ARCHIVO
+    =====================================
+    */
+
+    if (
+
+        !isset($_FILES['foto']) ||
+
+        $_FILES['foto']['error'] !== UPLOAD_ERR_OK
+
+    ) {
+
+        $_SESSION['error'] =
+            'Selecciona una fotografía.';
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    $archivo = $_FILES['foto'];
+
+    /*
+    =====================================
+            EXTENSIÓN
+    =====================================
+    */
+
+    $extension = strtolower(
+
+        pathinfo(
+            $archivo['name'],
+            PATHINFO_EXTENSION
+        )
+
+    );
+
+    $permitidas = [
+
+        'jpg',
+        'jpeg',
+        'png'
+
+    ];
+
+    if (!in_array($extension, $permitidas)) {
+
+        $_SESSION['error'] =
+            'Solo se permiten imágenes JPG y PNG.';
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    /*
+    =====================================
+            TAMAÑO
+    =====================================
+    */
+
+    if ($archivo['size'] > (2 * 1024 * 1024)) {
+
+        $_SESSION['error'] =
+            'La imagen no puede ser mayor a 2 MB.';
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    /*
+    =====================================
+            CARPETA
+    =====================================
+    */
+
+    $carpeta = dirname(__DIR__, 2)
+        . '/public/uploads/perfiles/';
+
+    if (!is_dir($carpeta)) {
+
+        mkdir($carpeta, 0777, true);
+
+    }
+
+    /*
+    =====================================
+            NOMBRE NUEVO
+    =====================================
+    */
+
+    $nuevoNombre =
+
+        $perfil['ClvPac']
+
+        . '_'
+
+        . time()
+
+        . '.'
+
+        . $extension;
+
+    $rutaDestino =
+
+        $carpeta
+
+        . $nuevoNombre;
+
+    /*
+    =====================================
+            SUBIR ARCHIVO
+    =====================================
+    */
+    if (!move_uploaded_file(
+
+        $archivo['tmp_name'],
+
+        $rutaDestino
+
+    )) {
+
+        $_SESSION['error'] =
+            'No fue posible subir la fotografía.';
+
+        Response::redirect('paciente/perfil');
+
+    }
+
+    /*
+    =====================================
+            BORRAR FOTO ANTERIOR
+    =====================================
+    */
+
+    if (
+
+        !empty($perfil['FotoPerfilPac']) &&
+
+        $perfil['FotoPerfilPac'] !== 'perfil-default.png'
+
+    ) {
+
+        $fotoAnterior =
+
+            $carpeta
+
+            . $perfil['FotoPerfilPac'];
+
+        if (file_exists($fotoAnterior)) {
+
+             @unlink($fotoAnterior);
+
+        }
+
+    }
+
+    /*
+    =====================================
+            ACTUALIZAR BD
+    =====================================
+    */
+
+    if (
+
+        $pacienteModel->actualizarFotografia(
+
+             $perfil['ClvPac'],
+
+             $nuevoNombre
+
+        )
+
+    ) {
+
+        $_SESSION['success'] =
+            'Fotografía actualizada correctamente.';
+
+    } else {
+
+        $_SESSION['error'] =
+            'No fue posible actualizar la fotografía.';
+
+    }
+
+    Response::redirect('paciente/perfil');
+}
+>>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
 
     /*
     =====================================

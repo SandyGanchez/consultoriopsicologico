@@ -768,6 +768,7 @@ public function completarInformacionPorPsicologo(
     }
 }
 
+<<<<<<< HEAD
 /**
  * @param array<string, mixed> $dirActual
  * @param array<string, string> $payload
@@ -1762,5 +1763,41 @@ private function calcularIniciales(
     $iniciales = $inicialNombre . $inicialApellido;
 
     return $iniciales !== '' ? $iniciales : 'P';
+=======
+/*
+=====================================
+    ACTUALIZAR FOTOGRAFÍA
+=====================================
+*/
+
+public function actualizarFotografia(
+    string $clvPac,
+    string $foto
+): bool
+{
+    $sql = "
+
+        UPDATE paciente
+
+        SET
+
+            FotoPerfilPac = ?
+
+        WHERE
+
+            ClvPac = ?
+
+    ";
+
+    $stmt = $this->db->prepare($sql);
+
+    return $stmt->execute([
+
+        $foto,
+
+        $clvPac
+
+    ]);
+>>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
 }
 }

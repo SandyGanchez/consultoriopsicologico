@@ -15,9 +15,19 @@ class App
     $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     $uri = is_string($uri) ? $uri : '/';
 
+<<<<<<< HEAD
     $base = Paths::urlBasePath();
 
     if ($base !== '' && str_starts_with($uri, $base)) {
+=======
+
+    $base = '/consultorio_psicologico/public';
+
+        $base = '/consultorio_psicologico/public';
+    
+
+    if (str_starts_with($uri, $base)) {
+>>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
         $uri = substr($uri, strlen($base));
     }
 
