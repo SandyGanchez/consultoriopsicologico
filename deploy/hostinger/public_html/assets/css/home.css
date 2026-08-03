@@ -1,0 +1,1058 @@
+:root{
+
+    --primary:#99CDD8;
+
+    --secondary:#DAEBE3;
+
+    --cream:#FDE8D3;
+
+    --accent:#F3C3B2;
+
+    --card:#CFD6C4;
+
+    --dark:#657166;
+
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:#fff;
+
+}
+
+.hero{
+
+    background:linear-gradient(
+        180deg,
+        var(--secondary),
+        white
+    );
+
+    min-height:90vh;
+
+    display:flex;
+
+    align-items:center;
+
+}
+
+.logo-home{
+
+    width:120px;
+
+    max-height:120px;
+
+    object-fit:contain;
+
+}
+
+.hero h1{
+
+    color:var(--dark);
+
+}
+
+.hero h4{
+
+    color:#777;
+
+}
+
+.btn-primary{
+
+    background:var(--primary);
+
+    border:none;
+
+}
+
+.btn-primary:hover{
+
+    background:#83bcc8;
+
+}
+
+.btn-outline-secondary{
+
+    border:2px solid var(--dark);
+
+    color:var(--dark);
+
+}
+
+.btn-outline-secondary:hover{
+
+    background:var(--dark);
+
+    color:white;
+
+}
+.servicio-card{
+
+    border-radius:20px;
+
+    transition:.3s;
+
+    background:#fff;
+
+}
+
+.servicio-card:hover{
+
+    transform:translateY(-8px);
+
+}
+
+.icono-servicio{
+
+    width:80px;
+
+    height:80px;
+
+    margin:auto;
+
+    border-radius:50%;
+
+    background:#99CDD8;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.icono-servicio i{
+
+    font-size:2rem;
+
+    color:white;
+
+}
+.hero{
+
+    background:linear-gradient(180deg,#DAEBE3 0%,#FFFFFF 100%);
+
+    overflow:hidden;
+
+}
+
+.hero-img{
+
+    max-width:90%;
+
+    border-radius:25px;
+
+    box-shadow:0 20px 45px rgba(0,0,0,.12);
+
+    transition:.4s;
+
+}
+
+.hero-img:hover{
+
+    transform:scale(1.02);
+
+}
+
+.hero-psychology-fallback{
+    position:relative;
+    width:100%;
+    max-width:90%;
+    margin:0 auto;
+    aspect-ratio:4/3;
+    min-height:280px;
+    border-radius:25px;
+    overflow:hidden;
+    background:linear-gradient(
+        135deg,
+        #DAEBE3 0%,
+        #99CDD8 45%,
+        #FDE8D3 100%
+    );
+    box-shadow:0 20px 45px rgba(0,0,0,.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.hero-fallback-circle{
+    position:relative;
+    z-index:2;
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    background:rgba(255,255,255,.85);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 8px 24px rgba(101,113,102,.15);
+}
+
+.hero-fallback-circle .bi{
+    font-size:3.5rem;
+    color:#657166;
+}
+
+.hero-fallback-decoration{
+    position:absolute;
+    border-radius:50%;
+    opacity:.35;
+}
+
+.hero-fallback-decoration-one{
+    width:180px;
+    height:180px;
+    background:#F3C3B2;
+    top:10%;
+    right:8%;
+}
+
+.hero-fallback-decoration-two{
+    width:140px;
+    height:140px;
+    background:#CFD6C4;
+    bottom:12%;
+    left:10%;
+}
+
+.hero h1{
+
+    color:#657166;
+
+}
+
+.hero .lead{
+
+    line-height:1.8;
+
+}
+
+.badge{
+
+    font-size:.95rem;
+
+}
+
+.hero .btn{
+
+    transition:.3s;
+
+}
+
+.hero .btn:hover{
+
+    transform:translateY(-3px);
+
+}
+html{
+    scroll-behavior:smooth;
+}
+
+/* =========================================
+   Sección pública de especialistas
+   ========================================= */
+
+/* Portada multiconsultorio PsicoMatch */
+.platform-hero{
+    background:
+        radial-gradient(circle at top right, rgba(253,232,211,.75), transparent 45%),
+        linear-gradient(160deg, #F7F9F8 0%, #DAEBE3 55%, #FFFFFF 100%);
+}
+
+.platform-hero__eyebrow{
+    display:inline-block;
+    margin-bottom:.85rem;
+    color:#657166;
+    font-size:.78rem;
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+}
+
+.platform-hero__title{
+    color:#657166;
+    font-size:clamp(2rem,4vw,3rem);
+    font-weight:700;
+    line-height:1.15;
+}
+
+.platform-hero__lead{
+    max-width:36rem;
+    margin-top:1rem;
+    color:rgba(101,113,102,.88);
+    font-size:1.1rem;
+    line-height:1.7;
+}
+
+.platform-hero__panel{
+    padding:1.75rem;
+    border:1px solid rgba(153,205,216,.35);
+    border-radius:1.5rem;
+    background:#FFFFFF;
+    box-shadow:0 16px 40px rgba(101,113,102,.08);
+}
+
+.platform-clinics{
+    background:#F7F9F8;
+}
+
+.platform-clinics__title{
+    color:#657166;
+    font-weight:700;
+}
+
+.platform-clinic-card{
+    display:flex;
+    flex-direction:column;
+    gap:.85rem;
+    padding:1.5rem;
+    border:1px solid rgba(153,205,216,.3);
+    border-radius:1.25rem;
+    background:#FFFFFF;
+    box-shadow:0 12px 30px rgba(101,113,102,.07);
+}
+
+.platform-clinic-card__head{
+    display:flex;
+    gap:.9rem;
+    align-items:center;
+}
+
+.platform-clinic-card__logo,
+.platform-clinic-card__logo-fallback{
+    width:64px;
+    height:64px;
+    flex:0 0 64px;
+    border-radius:50%;
+    object-fit:cover;
+}
+
+.platform-clinic-card__logo-fallback{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#DAEBE3;
+    color:#657166;
+    font-size:1.4rem;
+    font-weight:700;
+}
+
+.platform-clinic-card__name{
+    margin:0;
+    color:#657166;
+    font-size:1.15rem;
+    font-weight:700;
+}
+
+.platform-clinic-card__place{
+    color:rgba(101,113,102,.75);
+    font-size:.9rem;
+}
+
+.platform-clinic-card__slogan{
+    margin:0;
+    color:#99CDD8;
+    font-weight:600;
+}
+
+.platform-clinic-card__desc{
+    display:-webkit-box;
+    overflow:hidden;
+    margin:0;
+    color:rgba(101,113,102,.82);
+    line-height:1.6;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:3;
+    line-clamp:3;
+}
+
+.platform-clinic-card__cta{
+    margin-top:auto;
+    border-radius:999px;
+    background:#657166;
+    color:#FFFFFF;
+    font-weight:600;
+}
+
+.platform-clinic-card__cta:hover,
+.platform-clinic-card__cta:focus{
+    background:#556055;
+    color:#FFFFFF;
+}
+
+.specialists-section{
+    background:#F7F9F8;
+}
+
+.specialists-section__header{
+    max-width:760px;
+    margin:0 auto 3rem;
+}
+
+.specialists-section__eyebrow{
+    display:inline-block;
+    margin-bottom:.75rem;
+    color:#657166;
+    font-size:.75rem;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+
+.specialists-section__title{
+    margin-bottom:1rem;
+    color:#657166;
+    font-size:clamp(1.75rem,3vw,2.25rem);
+    font-weight:700;
+}
+
+.specialists-section__divider{
+    display:block;
+    width:72px;
+    height:4px;
+    margin:0 auto 1.25rem;
+    border-radius:999px;
+    background:linear-gradient(
+        90deg,
+        #99CDD8,
+        #DAEBE3
+    );
+}
+
+.specialists-section__intro{
+    max-width:680px;
+    margin-bottom:0;
+    color:rgba(101,113,102,.85);
+    font-size:1.05rem;
+    line-height:1.7;
+}
+
+.specialists-section__empty{
+    max-width:560px;
+    margin:0 auto;
+    padding:3rem 2rem;
+    border:1px solid rgba(153,205,216,.35);
+    border-radius:1.25rem;
+    background:#FFFFFF;
+    box-shadow:0 10px 30px rgba(101,113,102,.06);
+}
+
+.specialists-section__empty-icon{
+    display:block;
+    margin-bottom:1rem;
+    color:#99CDD8;
+    font-size:3rem;
+}
+
+.specialists-section__empty-text{
+    color:#657166;
+    font-size:1.05rem;
+}
+
+.specialist-card{
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid rgba(153,205,216,.28);
+    border-top:5px solid #99CDD8;
+    border-radius:1.25rem;
+    background:#FFFFFF;
+    box-shadow:0 12px 32px rgba(101,113,102,.07);
+    transition:
+        transform .25s ease,
+        box-shadow .25s ease;
+}
+
+.specialist-card:hover,
+.specialist-card:focus-within{
+    transform:translateY(-4px);
+    box-shadow:0 18px 40px rgba(101,113,102,.11);
+}
+
+.specialist-card__photo-wrap{
+    display:flex;
+    justify-content:center;
+    padding:2rem 2rem .5rem;
+    background:linear-gradient(
+        180deg,
+        #DAEBE3 0%,
+        #FFFFFF 100%
+    );
+}
+
+.specialist-photo{
+    width:112px;
+    height:112px;
+    border:4px solid #FFFFFF;
+    border-radius:50%;
+    object-fit:cover;
+    box-shadow:0 8px 24px rgba(101,113,102,.12);
+}
+
+.specialist-photo--initials{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#657166;
+    font-size:2rem;
+    font-weight:600;
+    background:#FDE8D3;
+}
+
+.specialist-card__body{
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    gap:.75rem;
+    padding:1.25rem 1.5rem 1rem;
+}
+
+.specialist-card__name{
+    margin:0;
+    color:#657166;
+    font-size:1.2rem;
+    font-weight:700;
+    text-align:center;
+}
+
+.specialist-specialty{
+    display:inline-block;
+    align-self:center;
+    padding:.35rem .85rem;
+    border-radius:999px;
+    background:#DAEBE3;
+    color:#657166;
+    font-size:.85rem;
+    font-weight:600;
+}
+
+.specialist-card__clinic{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.4rem;
+    margin:0;
+    color:rgba(101,113,102,.78);
+    font-size:.92rem;
+    text-align:center;
+}
+
+.specialist-card__clinic i{
+    color:#99CDD8;
+}
+
+.specialist-card__description{
+    display:-webkit-box;
+    overflow:hidden;
+    margin:0;
+    color:rgba(101,113,102,.82);
+    font-size:.95rem;
+    line-height:1.6;
+    text-align:center;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:4;
+    line-clamp:4;
+}
+
+.specialist-services{
+    margin-top:auto;
+    padding-top:.75rem;
+}
+
+.specialist-services__label{
+    display:block;
+    margin-bottom:.5rem;
+    color:#657166;
+    font-size:.8rem;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-align:center;
+    text-transform:uppercase;
+}
+
+.specialist-services__empty{
+    display:block;
+    color:rgba(101,113,102,.65);
+    font-size:.88rem;
+    text-align:center;
+}
+
+.specialist-services__tags{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:.5rem;
+}
+
+.specialist-services__tag{
+    padding:.3rem .65rem;
+    border-radius:999px;
+    background:#FDE8D3;
+    color:#657166;
+    font-size:.78rem;
+    font-weight:500;
+}
+
+.specialist-services__more{
+    padding:.3rem .65rem;
+    border-radius:999px;
+    background:#CFD6C4;
+    color:#657166;
+    font-size:.78rem;
+    font-weight:600;
+}
+
+.specialists-search{
+    border-radius:1.25rem !important;
+    background:#FFFFFF;
+}
+
+.specialists-search .form-control,
+.specialists-search .form-select,
+.specialists-search .input-group-text{
+    border-radius:.85rem;
+    border-color:rgba(153,205,216,.55);
+}
+
+.specialists-search .input-group-text{
+    border-right:0;
+    color:#657166;
+}
+
+.specialists-search .input-group .form-control{
+    border-left:0;
+}
+
+.specialists-results-meta{
+    padding:.75rem 1rem;
+    border-radius:1rem;
+    background:#FFFFFF;
+    border:1px solid rgba(153,205,216,.28);
+}
+
+.specialist-actions{
+    display:flex;
+    justify-content:center;
+    padding:0 1.5rem 1.5rem;
+    margin-top:auto;
+}
+
+.specialist-actions--dual{
+    flex-wrap:wrap;
+    gap:.65rem;
+}
+
+.specialist-actions__secondary{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:140px;
+    padding:.65rem 1.1rem;
+    border:1px solid #99CDD8;
+    border-radius:999px;
+    background:#FFFFFF;
+    color:#657166;
+    font-weight:600;
+    text-decoration:none;
+}
+
+.specialist-actions__secondary:hover,
+.specialist-actions__secondary:focus{
+    background:#DAEBE3;
+    color:#657166;
+}
+
+.specialist-actions__primary--disabled{
+    opacity:.7;
+    cursor:not-allowed;
+    background:#CFD6C4 !important;
+}
+
+.public-profile{
+    background:linear-gradient(180deg,#F7F9F8 0%,#FFFFFF 35%);
+}
+
+.public-profile__back{
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    margin-bottom:1.5rem;
+    color:#657166;
+    font-weight:600;
+    text-decoration:none;
+}
+
+.public-profile__back:hover{
+    color:#99CDD8;
+}
+
+.public-profile__hero{
+    display:flex;
+    flex-wrap:wrap;
+    gap:1.75rem;
+    align-items:center;
+    padding:2rem;
+    border:1px solid rgba(153,205,216,.3);
+    border-radius:1.5rem;
+    background:#FFFFFF;
+    box-shadow:0 12px 32px rgba(101,113,102,.07);
+}
+
+.public-profile__photo{
+    width:140px;
+    height:140px;
+    border:5px solid #FFFFFF;
+    border-radius:50%;
+    object-fit:cover;
+    box-shadow:0 10px 28px rgba(101,113,102,.14);
+}
+
+.public-profile__photo--initials{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#FDE8D3;
+    color:#657166;
+    font-size:2.5rem;
+    font-weight:700;
+}
+
+.public-profile__name{
+    margin:0 0 .75rem;
+    color:#657166;
+    font-weight:700;
+}
+
+.public-profile__specialty{
+    display:inline-block;
+    margin-bottom:.75rem;
+    padding:.4rem .9rem;
+    border-radius:999px;
+    background:#DAEBE3;
+    color:#657166;
+    font-weight:600;
+}
+
+.public-profile__clinic{
+    margin-bottom:.75rem;
+    color:rgba(101,113,102,.85);
+}
+
+.public-profile__badge{
+    display:inline-block;
+    padding:.35rem .8rem;
+    border-radius:999px;
+    background:#FDE8D3;
+    color:#657166;
+    font-size:.85rem;
+    font-weight:600;
+}
+
+.public-profile__card,
+.public-profile__service{
+    padding:1.5rem;
+    border:1px solid rgba(153,205,216,.28);
+    border-radius:1.25rem;
+    background:#FFFFFF;
+    box-shadow:0 8px 24px rgba(101,113,102,.06);
+}
+
+@media (max-width:767.98px){
+    .public-profile__hero{
+        justify-content:center;
+        text-align:center;
+    }
+
+    .public-profile__intro{
+        width:100%;
+    }
+
+    .specialist-actions--dual .btn{
+        width:100%;
+    }
+}
+
+.specialist-actions__primary{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    min-width:180px;
+    padding:.7rem 1.25rem;
+    border:none;
+    border-radius:999px;
+    background:#657166;
+    color:#FFFFFF;
+    font-weight:600;
+    text-decoration:none;
+    transition:
+        background-color .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.specialist-actions__primary:hover,
+.specialist-actions__primary:focus{
+    background:#556055;
+    color:#FFFFFF;
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(101,113,102,.18);
+}
+
+.specialist-actions__primary:focus-visible{
+    outline:3px solid rgba(153,205,216,.65);
+    outline-offset:2px;
+}
+
+@media (max-width:767.98px){
+
+    .specialists-section__header{
+        margin-bottom:2rem;
+    }
+
+    .specialist-card__body{
+        padding-inline:1.25rem;
+    }
+
+    .specialist-actions{
+        padding-inline:1.25rem;
+    }
+
+    .specialist-actions__primary{
+        width:100%;
+    }
+
+}
+
+/* Sección pública Visítanos / Encuéntranos */
+
+.public-clinic-info{
+    background:#F7F9F8;
+}
+
+.public-clinic-info__eyebrow{
+    display:inline-block;
+    font-size:.78rem;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:#99CDD8;
+    margin-bottom:.35rem;
+}
+
+.public-clinic-info__title{
+    color:#657166;
+    font-weight:700;
+}
+
+.public-clinic-info__intro{
+    color:#657166;
+    opacity:.85;
+    max-width:36rem;
+}
+
+.public-clinic-info__logo{
+    width:96px;
+    max-height:96px;
+    object-fit:contain;
+}
+
+.public-address-card{
+    background:#FFFFFF;
+    border:1px solid #DAEBE3;
+    border-radius:16px;
+    box-shadow:0 8px 24px rgba(101,113,102,.08);
+    padding:1.5rem;
+    height:100%;
+}
+
+.public-address-card__name{
+    color:#657166;
+    font-size:1.35rem;
+    font-weight:700;
+}
+
+.public-address-card__slogan{
+    color:#99CDD8;
+    font-weight:600;
+}
+
+.public-address-card__description{
+    color:#657166;
+    opacity:.9;
+}
+
+.public-contact-list li{
+    display:flex;
+    gap:.65rem;
+    align-items:flex-start;
+    margin-bottom:.75rem;
+    color:#657166;
+}
+
+.public-contact-list i{
+    color:#99CDD8;
+    margin-top:.15rem;
+}
+
+.public-contact-list a{
+    color:#657166;
+    text-decoration:none;
+}
+
+.public-contact-list a:hover{
+    color:#99CDD8;
+}
+
+.public-schedule-list__title,
+.public-cancellation-policy__title{
+    color:#657166;
+    font-size:1rem;
+    font-weight:700;
+    margin-bottom:.65rem;
+}
+
+.public-schedule-list__item{
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    padding:.35rem 0;
+    border-bottom:1px dashed #DAEBE3;
+    color:#657166;
+    font-size:.92rem;
+}
+
+.public-schedule-list__item:last-child{
+    border-bottom:none;
+}
+
+.public-cancellation-policy{
+    background:#DAEBE3;
+    border-radius:12px;
+    padding:1rem;
+    color:#657166;
+}
+
+.public-clinic-map{
+    width:100%;
+    min-height:280px;
+    height:360px;
+    border-radius:16px;
+    border:1px solid #DAEBE3;
+    overflow:hidden;
+    background:#FFFFFF;
+}
+
+.public-clinic-map--fallback{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    padding:1.5rem;
+    color:#657166;
+    background:#FFFFFF;
+    box-shadow:0 8px 24px rgba(101,113,102,.08);
+}
+
+.public-location-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.65rem;
+    margin-top:1rem;
+}
+
+.public-location-actions__btn{
+    background:#657166;
+    color:#FFFFFF;
+    border:none;
+    border-radius:999px;
+    padding:.55rem 1rem;
+    font-size:.92rem;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+}
+
+.public-location-actions__btn:hover{
+    background:#556055;
+    color:#FFFFFF;
+}
+
+.public-map-message{
+    margin-top:.75rem;
+    font-size:.88rem;
+    color:#657166;
+    background:#FDE8D3;
+    border-radius:10px;
+    padding:.65rem .85rem;
+}
+
+.public-clinic-features__title{
+    color:#657166;
+    font-weight:700;
+    margin-bottom:1.25rem;
+}
+
+.public-clinic-features__item{
+    background:#FFFFFF;
+    border:1px solid #DAEBE3;
+    border-radius:14px;
+    padding:1.25rem;
+    height:100%;
+    box-shadow:0 6px 18px rgba(101,113,102,.06);
+    text-align:center;
+}
+
+.public-clinic-features__item i{
+    font-size:1.75rem;
+    color:#99CDD8;
+    margin-bottom:.65rem;
+}
+
+.public-clinic-features__item h4{
+    color:#657166;
+    font-size:1.05rem;
+    font-weight:700;
+}
+
+.public-clinic-features__item p{
+    color:#657166;
+    opacity:.88;
+    font-size:.92rem;
+}
+
+.public-schedule-section{
+    background:#F8F9FA;
+}
+
+.public-schedule-section__title{
+    color:#657166;
+}
+
+@media (max-width:991.98px){
+    .public-location-actions__btn{
+        flex:1 1 calc(50% - .5rem);
+        justify-content:center;
+    }
+}
+
+@media (max-width:575.98px){
+    .public-clinic-map{
+        min-height:280px;
+        height:280px;
+    }
+
+    .public-location-actions__btn{
+        flex:1 1 100%;
+    }
+
+    .public-schedule-list__item{
+        flex-direction:column;
+        gap:.15rem;
+    }
+}

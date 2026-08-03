@@ -1,0 +1,796 @@
+/*=====================================
+=     DASHBOARD PACIENTE PsicoMatch   =
+=====================================*/
+
+.paciente-dashboard {
+    --pd-primary: #657166;
+    --pd-soft-blue: #99CDD8;
+    --pd-mint: #DAEBE3;
+    --pd-peach: #FDE8D3;
+    --pd-rose: #F3C3B2;
+    --pd-sage: #CFD6C4;
+    --pd-white: #FFFFFF;
+    --pd-bg: #F7F9F8;
+    --pd-bg-alt: #F8F9FA;
+    --pd-shadow: 0 8px 22px rgba(101, 113, 102, 0.08);
+    --pd-radius: 18px;
+    --pd-radius-sm: 14px;
+    color: var(--pd-primary);
+}
+
+.paciente-content:has(.paciente-dashboard) {
+    padding: 1.5rem 1.25rem 2.5rem;
+    overflow-x: clip;
+    background: var(--pd-bg);
+}
+
+/*---------- Bienvenida ----------*/
+
+.paciente-welcome {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.6rem 1.75rem;
+    margin-bottom: 1.25rem;
+    border-radius: var(--pd-radius);
+    background: linear-gradient(135deg, #DAEBE3 0%, #FDE8D3 100%);
+    border: 1px solid rgba(153, 205, 216, 0.35);
+    overflow: hidden;
+}
+
+.paciente-welcome-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 40rem;
+}
+
+.paciente-welcome-date {
+    margin: 0 0 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #5a665c;
+    letter-spacing: 0.01em;
+}
+
+.paciente-welcome h1 {
+    margin: 0 0 0.45rem;
+    font-size: clamp(1.55rem, 2.4vw, 2rem);
+    font-weight: 700;
+    color: var(--pd-primary);
+    line-height: 1.2;
+}
+
+.paciente-welcome-text {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #5f6b60;
+    max-width: 32rem;
+}
+
+.paciente-welcome-art {
+    position: relative;
+    width: 5.5rem;
+    height: 5.5rem;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    z-index: 1;
+}
+
+.paciente-welcome-art > i {
+    font-size: 1.75rem;
+    color: var(--pd-primary);
+    opacity: 0.85;
+}
+
+.paciente-welcome-orb {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.paciente-welcome-orb--a {
+    width: 5.2rem;
+    height: 5.2rem;
+    background: rgba(153, 205, 216, 0.45);
+}
+
+.paciente-welcome-orb--b {
+    width: 3.4rem;
+    height: 3.4rem;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+/*---------- Stats ----------*/
+
+.paciente-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.35rem;
+}
+
+.paciente-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem 1.05rem;
+    background: var(--pd-white);
+    border: 1px solid rgba(207, 214, 196, 0.7);
+    border-radius: var(--pd-radius-sm);
+    box-shadow: var(--pd-shadow);
+}
+
+.paciente-stat-icon {
+    width: 2.65rem;
+    height: 2.65rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 1.15rem;
+    color: var(--pd-primary);
+}
+
+.paciente-stat--proximas .paciente-stat-icon {
+    background: #DAEBE3;
+}
+
+.paciente-stat--asistidas .paciente-stat-icon {
+    background: #CFD6C4;
+}
+
+.paciente-stat--canceladas .paciente-stat-icon {
+    background: #F3C3B2;
+}
+
+.paciente-stat--avisos .paciente-stat-icon {
+    background: #FDE8D3;
+}
+
+.paciente-stat-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7a847b;
+    margin-bottom: 0.15rem;
+}
+
+.paciente-stat-value {
+    display: block;
+    font-size: 1.55rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--pd-primary);
+}
+
+/*---------- Grid principal ----------*/
+
+.paciente-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.paciente-dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.paciente-dashboard-aside {
+    min-width: 0;
+}
+
+/*---------- Próxima cita ----------*/
+
+.paciente-next-appointment {
+    display: grid;
+    grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
+    background: var(--pd-white);
+    border-radius: var(--pd-radius);
+    border: 1px solid rgba(153, 205, 216, 0.4);
+    box-shadow: var(--pd-shadow);
+    overflow: hidden;
+    border-left: 5px solid var(--pd-soft-blue);
+}
+
+.paciente-next-appointment-date {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 1.35rem 1.2rem;
+    background: linear-gradient(180deg, #DAEBE3 0%, #F8F9FA 100%);
+}
+
+.paciente-next-appointment-date > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6d796e;
+}
+
+.paciente-next-appointment-date > strong {
+    font-size: 1.1rem;
+    line-height: 1.3;
+    color: var(--pd-primary);
+}
+
+.paciente-next-appointment-date > em {
+    font-style: normal;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #5a665c;
+}
+
+.paciente-next-appointment-body {
+    padding: 1.35rem 1.4rem;
+}
+
+.paciente-next-appointment-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.paciente-next-appointment-head h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--pd-primary);
+    line-height: 1.3;
+}
+
+.paciente-next-appointment-meta {
+    list-style: none;
+    margin: 0 0 1.15rem;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.paciente-next-appointment-meta li {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+    color: #5f6b60;
+}
+
+.paciente-next-appointment-meta i {
+    color: var(--pd-soft-blue);
+    font-size: 1.05rem;
+}
+
+.paciente-next-appointment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.paciente-next-appointment--empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 1.75rem 1.5rem;
+    border-left: 5px solid var(--pd-soft-blue);
+    background:
+        linear-gradient(135deg, rgba(218, 235, 227, 0.55), #FFFFFF 55%);
+}
+
+.paciente-empty-icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #DAEBE3;
+    color: var(--pd-primary);
+    font-size: 1.4rem;
+    margin-bottom: 0.25rem;
+}
+
+.paciente-next-appointment--empty h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--pd-primary);
+}
+
+.paciente-next-appointment--empty p {
+    margin: 0 0 0.5rem;
+    max-width: 28rem;
+    color: #5f6b60;
+    line-height: 1.5;
+}
+
+/*---------- Botones ----------*/
+
+.paciente-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0.55rem 1.15rem;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.paciente-btn:focus-visible,
+.paciente-quick-action:focus-visible,
+.paciente-link-action:focus-visible,
+.paciente-notifications-list a:focus-visible,
+.paciente-section-head a:focus-visible,
+.paciente-notifications-all:focus-visible {
+    outline: 2px solid var(--pd-soft-blue);
+    outline-offset: 2px;
+}
+
+.paciente-btn-primary {
+    background: var(--pd-primary);
+    color: var(--pd-white);
+    box-shadow: 0 4px 12px rgba(101, 113, 102, 0.18);
+}
+
+.paciente-btn-primary:hover {
+    background: #556057;
+    color: var(--pd-white);
+}
+
+.paciente-btn-secondary {
+    background: var(--pd-white);
+    border-color: var(--pd-soft-blue);
+    color: var(--pd-primary);
+}
+
+.paciente-btn-secondary:hover {
+    background: #F7F9F8;
+    color: var(--pd-primary);
+}
+
+/*---------- Acciones rápidas ----------*/
+
+.paciente-quick-actions h2,
+.paciente-appointments h2,
+.paciente-activity h2,
+.paciente-notifications-panel h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--pd-primary);
+}
+
+.paciente-quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-top: 0.85rem;
+}
+
+.paciente-quick-action {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.05rem;
+    background: var(--pd-white);
+    border: 1px solid rgba(207, 214, 196, 0.75);
+    border-radius: var(--pd-radius-sm);
+    box-shadow: var(--pd-shadow);
+    text-decoration: none;
+    color: inherit;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.paciente-quick-action:hover {
+    transform: translateY(-2px);
+    border-color: rgba(153, 205, 216, 0.8);
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.1);
+    color: inherit;
+}
+
+.paciente-quick-action-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #DAEBE3;
+    color: var(--pd-primary);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.paciente-quick-action-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.paciente-quick-action-copy strong {
+    font-size: 0.98rem;
+    color: var(--pd-primary);
+}
+
+.paciente-quick-action-copy small {
+    font-size: 0.84rem;
+    line-height: 1.4;
+    color: #6d796e;
+}
+
+/*---------- Secciones / listados ----------*/
+
+.paciente-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.paciente-section-head a,
+.paciente-notifications-all {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--pd-primary);
+    text-decoration: none;
+}
+
+.paciente-section-head a:hover,
+.paciente-notifications-all:hover {
+    color: #4f594f;
+    text-decoration: underline;
+}
+
+.paciente-appointments,
+.paciente-activity,
+.paciente-notifications-panel {
+    background: var(--pd-white);
+    border: 1px solid rgba(207, 214, 196, 0.7);
+    border-radius: var(--pd-radius);
+    box-shadow: var(--pd-shadow);
+    padding: 1.15rem 1.2rem 1.25rem;
+}
+
+.paciente-panel-empty {
+    padding: 1.1rem 0.25rem;
+    color: #6d796e;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/*---------- Tabla citas ----------*/
+
+.paciente-appointments-table-wrap {
+    display: block;
+}
+
+.paciente-appointments-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.paciente-appointments-table th,
+.paciente-appointments-table td {
+    padding: 0.85rem 0.65rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(207, 214, 196, 0.55);
+    font-size: 0.92rem;
+}
+
+.paciente-appointments-table th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7a847b;
+    font-weight: 700;
+    background: var(--pd-bg-alt);
+}
+
+.paciente-appointments-table tbody tr:hover {
+    background: rgba(218, 235, 227, 0.35);
+}
+
+.paciente-appointments-table td:last-child {
+    white-space: nowrap;
+}
+
+.paciente-link-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--pd-soft-blue);
+    color: var(--pd-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    background: var(--pd-white);
+}
+
+.paciente-link-action:hover {
+    background: #F7F9F8;
+    color: var(--pd-primary);
+}
+
+.paciente-appointments-cards {
+    display: none;
+    gap: 0.75rem;
+}
+
+.paciente-appointment-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 1rem;
+    border-radius: var(--pd-radius-sm);
+    border: 1px solid rgba(207, 214, 196, 0.75);
+    background: var(--pd-bg-alt);
+}
+
+.paciente-appointment-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.15rem;
+}
+
+.paciente-appointment-card p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.92rem;
+    color: #5f6b60;
+}
+
+.paciente-appointment-card .paciente-btn {
+    margin-top: 0.45rem;
+    width: 100%;
+}
+
+/*---------- Badges ----------*/
+
+.paciente-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.55rem;
+    padding: 0.15rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.paciente-badge.is-programada {
+    background: #DAEBE3;
+    color: #657166;
+}
+
+.paciente-badge.is-asistida {
+    background: #CFD6C4;
+    color: #657166;
+}
+
+.paciente-badge.is-cancelada {
+    background: #F3C3B2;
+    color: #657166;
+}
+
+.paciente-badge.is-inasistencia {
+    background: #FDE8D3;
+    color: #657166;
+}
+
+/*---------- Actividad reciente ----------*/
+
+.paciente-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.paciente-activity-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 12px;
+    background: var(--pd-bg-alt);
+}
+
+.paciente-activity-list strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--pd-primary);
+    margin-bottom: 0.15rem;
+}
+
+.paciente-activity-list small {
+    display: block;
+    font-size: 0.82rem;
+    color: #6d796e;
+}
+
+/*---------- Notificaciones ----------*/
+
+.paciente-notifications-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--pd-primary);
+    background: #FDE8D3;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+}
+
+.paciente-notifications-list {
+    list-style: none;
+    margin: 0 0 0.85rem;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+}
+
+.paciente-notifications-list li a {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.8rem 0.85rem;
+    border-radius: 12px;
+    background: var(--pd-bg-alt);
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid transparent;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.paciente-notifications-list li.is-unread a {
+    background: rgba(218, 235, 227, 0.55);
+    border-color: rgba(153, 205, 216, 0.45);
+    position: relative;
+}
+
+.paciente-notifications-list li.is-unread a::before {
+    content: "";
+    position: absolute;
+    top: 0.95rem;
+    right: 0.85rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--pd-soft-blue);
+}
+
+.paciente-notifications-list strong {
+    font-size: 0.92rem;
+    color: var(--pd-primary);
+    padding-right: 1rem;
+}
+
+.paciente-notifications-list span {
+    font-size: 0.84rem;
+    color: #5f6b60;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.paciente-notifications-list small {
+    font-size: 0.78rem;
+    color: #7a847b;
+}
+
+.paciente-notifications-all {
+    display: inline-flex;
+    margin-top: 0.15rem;
+}
+
+/*---------- Responsivo ----------*/
+
+@media (max-width: 1199.98px) {
+    .paciente-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .paciente-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .paciente-next-appointment {
+        grid-template-columns: 1fr;
+    }
+
+    .paciente-next-appointment-date {
+        border-bottom: 1px solid rgba(153, 205, 216, 0.35);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .paciente-welcome {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.35rem 1.2rem;
+    }
+
+    .paciente-welcome-art {
+        align-self: flex-end;
+        margin-top: -3.5rem;
+        opacity: 0.9;
+    }
+
+    .paciente-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .paciente-quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .paciente-appointments-table-wrap {
+        display: none;
+    }
+
+    .paciente-appointments-cards {
+        display: grid;
+    }
+
+    .paciente-next-appointment-actions {
+        flex-direction: column;
+    }
+
+    .paciente-next-appointment-actions .paciente-btn,
+    .paciente-next-appointment--empty .paciente-btn {
+        width: 100%;
+    }
+
+    .paciente-activity-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .paciente-btn,
+    .paciente-quick-action {
+        transition: none;
+    }
+
+    .paciente-quick-action:hover {
+        transform: none;
+    }
+}

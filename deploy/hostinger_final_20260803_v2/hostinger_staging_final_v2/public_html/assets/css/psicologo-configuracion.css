@@ -1,0 +1,372 @@
+.psicologo-config-page {
+    --pm-sage: #657166;
+    --pm-aqua: #99CDD8;
+    --pm-mint: #DAEBE3;
+    --pm-peach: #FDE8D3;
+    --pm-coral: #F3C3B2;
+    --pm-olive: #CFD6C4;
+    --pm-white: #FFFFFF;
+    --pm-soft: #F7F9F8;
+    --pm-gray: #F8F9FA;
+
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.psicologo-config-header__eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.psicologo-config-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-header p {
+    margin: 0;
+    max-width: 42rem;
+    opacity: 0.85;
+}
+
+.psicologo-config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.psicologo-config-card {
+    background: var(--pm-white);
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 22px rgba(101, 113, 102, 0.07);
+    padding: 1.35rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
+.psicologo-config-card--full {
+    grid-column: 1 / -1;
+}
+
+.psicologo-config-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.psicologo-config-card__head > i {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 12px;
+    background: var(--pm-mint);
+    color: var(--pm-sage);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.psicologo-config-card__head h2 {
+    margin: 0 0 0.2rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-card__head p {
+    margin: 0;
+    font-size: 0.92rem;
+    opacity: 0.85;
+}
+
+.psicologo-config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+}
+
+.psicologo-config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.psicologo-config-field label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-input-group {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid rgba(101, 113, 102, 0.22);
+    border-radius: 12px;
+    background: var(--pm-gray);
+    overflow: hidden;
+}
+
+.psicologo-config-input-group:focus-within {
+    border-color: var(--pm-aqua);
+    box-shadow: 0 0 0 3px rgba(153, 205, 216, 0.35);
+}
+
+.psicologo-config-input-group input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 0.7rem 0.9rem;
+    color: var(--pm-sage);
+    outline: none;
+}
+
+.psicologo-config-toggle-pass {
+    border: 0;
+    background: transparent;
+    color: var(--pm-sage);
+    padding: 0 0.85rem;
+    opacity: 0.75;
+}
+
+.psicologo-config-toggle-pass:hover {
+    opacity: 1;
+    color: #4f5a50;
+}
+
+.psicologo-config-requirements {
+    margin: 0;
+    padding: 0.85rem 0.85rem 0.85rem 1.4rem;
+    background: var(--pm-peach);
+    border-radius: 12px;
+    color: var(--pm-sage);
+    font-size: 0.88rem;
+}
+
+.psicologo-config-requirements li + li {
+    margin-top: 0.2rem;
+}
+
+.psicologo-config-hint {
+    margin: 0;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.psicologo-config-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.psicologo-config-btn-primary,
+.psicologo-config-btn-secondary,
+.psicologo-config-chip {
+    border-radius: 12px;
+    border: 0;
+    font-weight: 600;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.psicologo-config-btn-primary {
+    background: var(--pm-sage);
+    color: var(--pm-white);
+    padding: 0.7rem 1.2rem;
+}
+
+.psicologo-config-btn-primary:hover {
+    background: var(--pm-aqua);
+    color: var(--pm-sage);
+}
+
+.psicologo-config-btn-secondary {
+    background: var(--pm-olive);
+    color: var(--pm-sage);
+    padding: 0.65rem 1.05rem;
+}
+
+.psicologo-config-btn-secondary:hover {
+    background: var(--pm-aqua);
+}
+
+.psicologo-config-access {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.psicologo-config-access fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.psicologo-config-access legend {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-bottom: 0.45rem;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.psicologo-config-chip {
+    background: var(--pm-soft);
+    color: var(--pm-sage);
+    border: 1px solid rgba(207, 214, 196, 0.9);
+    padding: 0.55rem 0.95rem;
+}
+
+.psicologo-config-chip:hover,
+.psicologo-config-chip.is-active {
+    background: var(--pm-aqua);
+    border-color: transparent;
+}
+
+.psicologo-config-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.psicologo-config-shortcut {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: var(--pm-sage);
+    background: var(--pm-soft);
+    border: 1px solid rgba(207, 214, 196, 0.7);
+    border-radius: 14px;
+    padding: 1rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.psicologo-config-shortcut i {
+    font-size: 1.25rem;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-shortcut:hover {
+    background: var(--pm-mint);
+    border-color: transparent;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-toast.toast {
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgba(101, 113, 102, 0.16);
+}
+
+.psicologo-config-toast .toast-header {
+    border: 0;
+    color: var(--pm-sage);
+}
+
+.psicologo-config-toast .toast-body {
+    color: var(--pm-sage);
+}
+
+.psicologo-config-toast--success .toast-header,
+.psicologo-config-toast--success .toast-body {
+    background: var(--pm-mint);
+}
+
+.psicologo-config-toast--error .toast-header,
+.psicologo-config-toast--error .toast-body {
+    background: var(--pm-coral);
+}
+
+.psicologo-config-current {
+    margin: 0 0 1rem;
+    color: #5f6b60;
+    font-size: 0.95rem;
+}
+
+.psicologo-config-hint {
+    margin: 0 0 0.75rem;
+    color: #6d796e;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.psicologo-config-verify {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.psicologo-config-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.psicologo-config-inline-actions .psicologo-config-btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Preferencias de accesibilidad (localStorage) */
+html.psicologo-access-font-large .psicologo-config-page,
+html.psicologo-access-font-large .psicologo-main {
+    font-size: 1.12rem;
+}
+
+html.psicologo-access-contrast .psicologo-layout {
+    filter: contrast(1.18);
+}
+
+html.psicologo-access-contrast .psicologo-config-card {
+    border-color: #657166;
+    box-shadow: none;
+}
+
+html.psicologo-access-contrast .psicologo-config-btn-primary {
+    outline: 2px solid #657166;
+}
+
+@media (max-width: 992px) {
+    .psicologo-config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .psicologo-config-shortcuts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .psicologo-config-card {
+        padding: 1.1rem;
+    }
+
+    .psicologo-config-shortcuts {
+        grid-template-columns: 1fr;
+    }
+
+    .psicologo-config-header h1 {
+        font-size: 1.45rem;
+    }
+}

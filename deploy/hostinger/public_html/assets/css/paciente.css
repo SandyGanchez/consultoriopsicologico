@@ -1,0 +1,578 @@
+/*=====================================
+=            PALETA PsicoMatch       =
+=====================================*/
+
+:root {
+    --pac-primary: #99CDD8;
+    --pac-primary-light: #DAEBE3;
+    --pac-cream: #FDE8D3;
+    --pac-peach: #F3C3B2;
+    --pac-green-soft: #CFD6C4;
+    --pac-text: #657166;
+    --pac-white: #FFFFFF;
+    --pac-background: #F7F9F8;
+    --pac-sidebar-width: 270px;
+
+    /* Compatibilidad con vistas existentes */
+    --verde1: #DAEBE3;
+    --verde2: #CFD6C4;
+    --verde3: #99CDD8;
+    --verde4: #657166;
+    --beige: #FDE8D3;
+    --gris: #F7F9F8;
+    --texto: #657166;
+    --titulo: #657166;
+    --sombra: 0 10px 25px rgba(101, 113, 102, 0.08);
+    --radio: 20px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: var(--pac-background);
+    color: var(--pac-text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/*=====================================
+=             LAYOUT                 =
+=====================================*/
+
+.paciente-layout {
+    min-height: 100vh;
+    display: flex;
+}
+
+.paciente-main {
+    width: calc(100% - var(--pac-sidebar-width));
+    min-height: 100vh;
+    margin-left: var(--pac-sidebar-width);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.paciente-content {
+    flex: 1;
+    padding: 32px;
+}
+
+.paciente-content:has(.appointment-page) {
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-x: clip;
+}
+
+/*=====================================
+=             SIDEBAR                =
+=====================================*/
+
+.paciente-sidebar {
+    width: var(--pac-sidebar-width);
+    min-height: 100vh;
+    padding: 24px 18px;
+    background: linear-gradient(
+        180deg,
+        var(--pac-primary-light),
+        var(--pac-green-soft)
+    );
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1000;
+    box-shadow: 4px 0 18px rgba(101, 113, 102, 0.12);
+    overflow-y: auto;
+}
+
+.paciente-brand {
+    padding: 0 8px 24px;
+    border-bottom: 1px solid rgba(101, 113, 102, 0.2);
+}
+
+.paciente-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--pac-text);
+    text-decoration: none;
+}
+
+.paciente-brand-link:hover {
+    color: var(--pac-text);
+}
+
+.paciente-brand-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background-color: var(--pac-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--pac-primary);
+    font-size: 1.7rem;
+    box-shadow: 0 8px 20px rgba(101, 113, 102, 0.12);
+    flex-shrink: 0;
+}
+
+.paciente-brand-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.paciente-brand-name {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.paciente-brand small {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: rgba(101, 113, 102, 0.8);
+}
+
+.paciente-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 24px;
+}
+
+.paciente-menu-link {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    color: var(--pac-text);
+    text-decoration: none;
+    font-weight: 700;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.paciente-menu-link:focus-visible {
+    outline: 2px solid var(--pac-primary);
+    outline-offset: 2px;
+}
+
+.paciente-menu-link > i {
+    width: 22px;
+    font-size: 1.15rem;
+    text-align: center;
+    color: inherit;
+}
+
+.paciente-menu-link:hover {
+    color: var(--pac-text);
+    background-color: rgba(255, 255, 255, 0.6);
+    transform: translateX(3px);
+}
+
+.paciente-menu-link.active {
+    background-color: var(--pac-white);
+    box-shadow: 0 8px 18px rgba(101, 113, 102, 0.12);
+}
+
+.paciente-sidebar-footer {
+    margin-top: auto;
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.paciente-sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 8px 18px rgba(101, 113, 102, 0.08);
+}
+
+.paciente-sidebar-user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--pac-cream);
+    color: var(--pac-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 0.85rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    border: 1px solid rgba(101, 113, 102, 0.14);
+}
+
+.paciente-sidebar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.paciente-sidebar-user-meta strong,
+.paciente-sidebar-user-meta small {
+    display: block;
+}
+
+.paciente-sidebar-user-meta strong {
+    font-size: 0.88rem;
+    color: var(--pac-text);
+    line-height: 1.2;
+}
+
+.paciente-sidebar-user-meta small {
+    margin-top: 2px;
+    color: rgba(101, 113, 102, 0.7);
+    font-size: 0.73rem;
+}
+
+.paciente-logout {
+    background-color: rgba(243, 195, 178, 0.55);
+}
+
+/*=====================================
+=             NAVBAR                 =
+=====================================*/
+
+.paciente-navbar {
+    min-height: 78px;
+    padding: 14px 30px;
+    border-bottom: 1px solid rgba(101, 113, 102, 0.12);
+    background-color: var(--pac-white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.paciente-navbar-title {
+    display: flex;
+    flex-direction: column;
+}
+
+.paciente-navbar-title span {
+    font-weight: 800;
+    color: var(--pac-text);
+}
+
+.paciente-navbar-title small {
+    margin-top: 2px;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.8rem;
+}
+
+.paciente-navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.paciente-navbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.paciente-navbar-user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--pac-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--pac-text);
+    border: 1px solid rgba(101, 113, 102, 0.14);
+}
+
+.paciente-navbar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.paciente-navbar-user strong,
+.paciente-navbar-user small {
+    display: block;
+}
+
+.paciente-navbar-user strong {
+    font-size: 0.88rem;
+    color: var(--pac-text);
+}
+
+.paciente-navbar-user small {
+    color: rgba(101, 113, 102, 0.7);
+    font-size: 0.73rem;
+}
+
+.paciente-sidebar-toggle {
+    background-color: var(--pac-primary-light);
+    color: var(--pac-text);
+}
+
+.paciente-sidebar-overlay {
+    display: none;
+}
+
+/*=====================================
+=            TARJETAS                =
+=====================================*/
+
+.card{
+
+    border:none!important;
+
+    border-radius:var(--radio);
+
+    overflow:hidden;
+
+    box-shadow:var(--sombra);
+
+    background:#FFFFFF;
+
+    transition:.25s;
+
+}
+
+.card:hover{
+
+    transform:translateY(-4px);
+
+}
+
+/*=====================================
+=        TARJETA BIENVENIDA          =
+=====================================*/
+
+.paciente-card-header{
+
+    background:linear-gradient(
+        135deg,
+        var(--verde1),
+        var(--verde2)
+    );
+
+    color:var(--titulo);
+
+}
+
+.paciente-card-header h2{
+
+    font-weight:700;
+
+}
+
+.paciente-card-header p{
+
+    margin-top:10px;
+
+}
+
+/*=====================================
+=        TITULOS TARJETAS            =
+=====================================*/
+
+.paciente-card-title{
+
+    background:var(--beige)!important;
+
+    color:var(--titulo)!important;
+
+    font-size:18px;
+
+    font-weight:700;
+
+}
+
+/*=====================================
+=            ICONOS                 =
+=====================================*/
+
+.bi{
+
+    color:var(--verde4);
+
+}
+
+.card-header i{
+
+    color:var(--verde4);
+
+}
+
+/*=====================================
+=             TEXTOS                 =
+=====================================*/
+
+h5{
+
+    color:var(--titulo);
+
+    font-weight:700;
+
+}
+
+strong{
+
+    color:var(--titulo);
+
+}
+
+small{
+
+    color:#7D8B91;
+
+}
+
+/*=====================================
+=          FRASE DEL DIA             =
+=====================================*/
+
+blockquote{
+
+    color:#648476;
+
+    font-size:20px;
+
+    font-style:italic;
+
+}
+
+/*=====================================
+=             FOOTER                 =
+=====================================*/
+
+.footer-paciente {
+    padding: 18px 30px;
+    border-top: 1px solid rgba(101, 113, 102, 0.1);
+    background-color: var(--pac-white);
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.78rem;
+}
+
+/*=====================================
+=           BOTONES                 =
+=====================================*/
+
+.btn-danger {
+    border: none;
+    border-radius: 14px;
+}
+
+/*=====================================
+=           MIS CITAS               =
+=====================================*/
+
+.paciente-cita-card {
+    transition: 0.25s;
+}
+
+.paciente-cita-card:hover {
+    transform: translateY(-6px);
+}
+
+.paciente-cita-card .badge {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: 50px;
+}
+
+.paciente-cita-card small {
+    display: block;
+    margin-bottom: 5px;
+    color: #8b8b8b;
+}
+
+.paciente-cita-card h5 {
+    margin-bottom: 0;
+}
+
+.paciente-cita-card .card-footer {
+    padding: 20px;
+}
+
+.paciente-cita-card .btn {
+    border-radius: 12px;
+}
+
+.display-1 {
+    color: var(--verde3);
+}
+
+/*=====================================
+=            RESPONSIVE              =
+=====================================*/
+
+@media (max-width: 991.98px) {
+    .paciente-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+
+    .paciente-sidebar.show {
+        transform: translateX(0);
+    }
+
+    .paciente-sidebar-overlay.show {
+        display: block;
+        background-color: rgba(0, 0, 0, 0.28);
+        position: fixed;
+        inset: 0;
+        z-index: 950;
+    }
+
+    .paciente-main {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .paciente-content {
+        padding: 24px 18px;
+    }
+
+    .paciente-navbar {
+        padding: 14px 18px;
+    }
+
+    .footer-paciente {
+        padding: 16px 18px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .paciente-content {
+        padding: 18px 14px;
+    }
+
+    .paciente-sidebar-user-meta strong {
+        font-size: 0.82rem;
+    }
+}

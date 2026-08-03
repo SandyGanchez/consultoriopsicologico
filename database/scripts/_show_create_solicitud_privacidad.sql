@@ -1,0 +1,31 @@
+﻿*************************** 1. row ***************************
+       Table: solicitud_privacidad
+Create Table: CREATE TABLE `solicitud_privacidad` (
+  `IdSolicitudPrivacidad` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `ClvUsu` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ClvPac` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TipoSolicitud` enum('ARCO_ACCESO','ARCO_RECTIFICACION','ARCO_CANCELACION','ARCO_OPOSICION','REVOCACION_CONSENTIMIENTO','OTRO') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `DetalleSolicitud` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `NombreSolicitante` varchar(180) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `CorreoSolicitante` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TelefonoSolicitante` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `IdAvisoPrivacidad` bigint unsigned DEFAULT NULL,
+  `EstadoSolicitud` enum('RECIBIDA','EN_REVISION','ATENDIDA','RECHAZADA') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RECIBIDA',
+  `FechaSolicitud` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `FechaAtencion` datetime DEFAULT NULL,
+  `ClvUsuAtencion` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `RespuestaTitular` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `FechaRespuesta` datetime DEFAULT NULL,
+  `NotasInternas` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`IdSolicitudPrivacidad`),
+  KEY `IDX_SolicitudPrivacidad_Usuario` (`ClvUsu`),
+  KEY `IDX_SolicitudPrivacidad_Paciente` (`ClvPac`),
+  KEY `IDX_SolicitudPrivacidad_Aviso` (`IdAvisoPrivacidad`),
+  KEY `IDX_SolicitudPrivacidad_Estado_Fecha` (`EstadoSolicitud`,`FechaSolicitud`),
+  KEY `IDX_SolicitudPrivacidad_Tipo` (`TipoSolicitud`),
+  KEY `IDX_SolicitudPrivacidad_Atencion` (`ClvUsuAtencion`),
+  CONSTRAINT `FK_SolicitudPrivacidad_Aviso` FOREIGN KEY (`IdAvisoPrivacidad`) REFERENCES `aviso_privacidad_version` (`IdAvisoPrivacidad`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_SolicitudPrivacidad_Paciente` FOREIGN KEY (`ClvPac`) REFERENCES `paciente` (`ClvPac`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_SolicitudPrivacidad_Usuario` FOREIGN KEY (`ClvUsu`) REFERENCES `usuario` (`ClvUsu`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_SolicitudPrivacidad_UsuarioAtencion` FOREIGN KEY (`ClvUsuAtencion`) REFERENCES `usuario` (`ClvUsu`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

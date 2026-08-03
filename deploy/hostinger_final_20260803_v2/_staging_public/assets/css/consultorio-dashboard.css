@@ -1,0 +1,609 @@
+/* Dashboard visual del consultorio — carga después de consultorio.css */
+
+.consultorio-dashboard {
+    color: #657166;
+}
+
+.consultorio-welcome {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    border-radius: 24px;
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(153, 205, 216, 0.35),
+            transparent 42%
+        ),
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f7f9f8 55%,
+            #daebe3 100%
+        );
+    box-shadow: 0 14px 34px rgba(53, 68, 58, 0.08);
+}
+
+.consultorio-welcome__glow {
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    right: -40px;
+    bottom: -70px;
+    border-radius: 50%;
+    background: rgba(253, 232, 211, 0.55);
+    pointer-events: none;
+}
+
+.consultorio-welcome__eyebrow {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(101, 113, 102, 0.72);
+}
+
+.consultorio-welcome__title {
+    font-size: clamp(1.55rem, 3vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #657166;
+}
+
+.consultorio-welcome__subtitle {
+    max-width: 38rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(101, 113, 102, 0.88);
+}
+
+.consultorio-welcome__date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    color: rgba(101, 113, 102, 0.8);
+}
+
+.consultorio-welcome__aside {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.consultorio-welcome__stat-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(101, 113, 102, 0.1);
+}
+
+.consultorio-welcome__stat-mini span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(101, 113, 102, 0.7);
+}
+
+.consultorio-welcome__stat-mini strong {
+    font-size: 1.75rem;
+    line-height: 1.1;
+    margin-top: 0.2rem;
+}
+
+.consultorio-welcome__stat-mini small {
+    font-size: 0.78rem;
+    color: rgba(101, 113, 102, 0.7);
+}
+
+.consultorio-pub-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.consultorio-pub-badge--ok {
+    background: rgba(218, 235, 227, 0.9);
+    color: #657166;
+    border-color: rgba(153, 205, 216, 0.45);
+}
+
+.consultorio-pub-badge--draft {
+    background: rgba(253, 232, 211, 0.9);
+    color: #657166;
+    border-color: rgba(243, 195, 178, 0.45);
+}
+
+.consultorio-pub-badge--muted {
+    background: rgba(207, 214, 196, 0.55);
+    color: #657166;
+    border-color: rgba(101, 113, 102, 0.15);
+}
+
+.btn-consultorio-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.55rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: #99cdd8;
+    color: #657166;
+    font-weight: 700;
+}
+
+.btn-consultorio-primary:hover,
+.btn-consultorio-primary:focus-visible {
+    background: #86c0cd;
+    color: #657166;
+}
+
+.btn-outline-consultorio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.55rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(101, 113, 102, 0.22);
+    background: #fff;
+    color: #657166;
+    font-weight: 700;
+}
+
+.btn-outline-consultorio:hover,
+.btn-outline-consultorio:focus-visible {
+    background: #f7f9f8;
+    color: #657166;
+    border-color: rgba(153, 205, 216, 0.8);
+}
+
+.btn-consultorio-primary:focus-visible,
+.btn-outline-consultorio:focus-visible {
+    outline: 2px solid #657166;
+    outline-offset: 2px;
+}
+
+.consultorio-stat-card {
+    height: 100%;
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(53, 68, 58, 0.06);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    color: #657166;
+}
+
+.consultorio-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(53, 68, 58, 0.1);
+    border-color: rgba(153, 205, 216, 0.75);
+    color: #657166;
+}
+
+.consultorio-stat-card:focus-visible {
+    outline: 2px solid #657166;
+    outline-offset: 2px;
+}
+
+.consultorio-stat-card .card-body {
+    padding: 1.15rem 1.2rem;
+}
+
+.consultorio-stat-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.25rem;
+}
+
+.consultorio-stat-card--blue .consultorio-stat-card__icon {
+    background: rgba(153, 205, 216, 0.35);
+    color: #4f7f8a;
+}
+
+.consultorio-stat-card--green .consultorio-stat-card__icon {
+    background: rgba(218, 235, 227, 0.9);
+    color: #5f7a6a;
+}
+
+.consultorio-stat-card--peach .consultorio-stat-card__icon {
+    background: rgba(253, 232, 211, 0.95);
+    color: #9a7460;
+}
+
+.consultorio-stat-card--rose .consultorio-stat-card__icon {
+    background: rgba(243, 195, 178, 0.55);
+    color: #9a6558;
+}
+
+.consultorio-stat-card__label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.consultorio-stat-card__value {
+    margin-top: 0.15rem;
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.consultorio-stat-card__hint {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: rgba(101, 113, 102, 0.7);
+}
+
+.consultorio-panel-card {
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    border-radius: 20px;
+    background: #fff;
+}
+
+.consultorio-panel-card__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #657166;
+}
+
+.consultorio-panel-card__title i {
+    color: #7aa8b4;
+}
+
+.consultorio-panel-card__subtitle,
+.consultorio-section-title + .consultorio-panel-card__subtitle {
+    font-size: 0.88rem;
+    color: rgba(101, 113, 102, 0.72);
+}
+
+.consultorio-section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #657166;
+}
+
+.consultorio-empty {
+    color: rgba(101, 113, 102, 0.72);
+}
+
+.consultorio-empty i {
+    display: block;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #99cdd8;
+}
+
+.consultorio-appointment-item {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+    background: #f7f9f8;
+    border: 1px solid rgba(101, 113, 102, 0.08);
+    border-left: 4px solid #99cdd8;
+}
+
+.consultorio-appointment-item--asistida {
+    border-left-color: #a8c4b4;
+}
+
+.consultorio-appointment-item--cancelada {
+    border-left-color: #f3c3b2;
+}
+
+.consultorio-appointment-item--inasistencia {
+    border-left-color: #cfd6c4;
+}
+
+.consultorio-appointment-item__date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid rgba(101, 113, 102, 0.1);
+}
+
+.consultorio-appointment-item__date strong {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.consultorio-appointment-item__date span {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: rgba(101, 113, 102, 0.7);
+}
+
+.consultorio-appointment-item__info strong {
+    font-size: 0.95rem;
+}
+
+.consultorio-appointment-item__info span,
+.consultorio-appointment-item__time span,
+.consultorio-appointment-item__meta small {
+    font-size: 0.82rem;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.consultorio-appointment-item__time {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.consultorio-appointment-item__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.consultorio-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.consultorio-status-badge--programada {
+    background: rgba(153, 205, 216, 0.35);
+    color: #4f6f78;
+}
+
+.consultorio-status-badge--asistida {
+    background: rgba(218, 235, 227, 0.95);
+    color: #4f6b5c;
+}
+
+.consultorio-status-badge--cancelada {
+    background: rgba(243, 195, 178, 0.55);
+    color: #8a5c50;
+}
+
+.consultorio-status-badge--inasistencia {
+    background: rgba(207, 214, 196, 0.7);
+    color: #5d6658;
+}
+
+.consultorio-activity-metric span {
+    font-size: 0.86rem;
+    color: rgba(101, 113, 102, 0.8);
+}
+
+.consultorio-activity-metric strong {
+    font-size: 1.05rem;
+}
+
+.consultorio-activity-progress {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(101, 113, 102, 0.08);
+    overflow: hidden;
+}
+
+.consultorio-activity-progress__bar {
+    border-radius: 999px;
+}
+
+.consultorio-activity-progress__bar--programadas {
+    background: #99cdd8;
+}
+
+.consultorio-activity-progress__bar--asistidas {
+    background: #a8c4b4;
+}
+
+.consultorio-activity-progress__bar--inasistencias {
+    background: #cfd6c4;
+}
+
+.consultorio-activity-progress__bar--canceladas {
+    background: #f3c3b2;
+}
+
+.consultorio-activity-importe {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    background: rgba(218, 235, 227, 0.55);
+    border: 1px solid rgba(153, 205, 216, 0.35);
+}
+
+.consultorio-activity-importe span {
+    font-size: 0.78rem;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.consultorio-activity-importe strong {
+    font-size: 1.15rem;
+}
+
+.consultorio-privacy-note {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: rgba(101, 113, 102, 0.7);
+}
+
+.consultorio-quick-action {
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    border-radius: 18px;
+    background: #fff;
+    color: #657166;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.consultorio-quick-action:hover {
+    transform: translateY(-2px);
+    border-color: rgba(153, 205, 216, 0.8);
+    box-shadow: 0 12px 24px rgba(53, 68, 58, 0.08);
+    color: #657166;
+}
+
+.consultorio-quick-action:focus-visible {
+    outline: 2px solid #657166;
+    outline-offset: 2px;
+}
+
+.consultorio-quick-action__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(153, 205, 216, 0.28);
+    color: #5f8791;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.consultorio-quick-action strong {
+    font-size: 0.95rem;
+}
+
+.consultorio-quick-action span span,
+.consultorio-quick-action .flex-grow-1 > span {
+    font-size: 0.8rem;
+    color: rgba(101, 113, 102, 0.72);
+}
+
+.consultorio-quick-action__arrow {
+    color: rgba(101, 113, 102, 0.45);
+    font-size: 1.1rem;
+}
+
+.consultorio-ops-alert {
+    border-radius: 16px;
+    border: 1px solid transparent;
+    background: #fff;
+    color: #657166;
+}
+
+.consultorio-ops-alert--info {
+    background: rgba(218, 235, 227, 0.45);
+    border-color: rgba(153, 205, 216, 0.45);
+}
+
+.consultorio-ops-alert--warn {
+    background: rgba(253, 232, 211, 0.55);
+    border-color: rgba(243, 195, 178, 0.65);
+}
+
+.consultorio-ops-alert__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.75);
+    flex-shrink: 0;
+}
+
+@media (max-width: 991.98px) {
+    .consultorio-appointment-item {
+        grid-template-columns: 56px minmax(0, 1fr);
+        grid-template-areas:
+            "date info"
+            "time time"
+            "meta meta";
+    }
+
+    .consultorio-appointment-item__date {
+        grid-area: date;
+    }
+
+    .consultorio-appointment-item__info {
+        grid-area: info;
+    }
+
+    .consultorio-appointment-item__time {
+        grid-area: time;
+    }
+
+    .consultorio-appointment-item__meta {
+        grid-area: meta;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .consultorio-welcome__aside {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .consultorio-welcome .btn,
+    .consultorio-welcome .btn-consultorio-primary,
+    .consultorio-welcome .btn-outline-consultorio {
+        width: 100%;
+    }
+
+    .consultorio-appointment-item {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "date"
+            "info"
+            "time"
+            "meta";
+    }
+
+    .consultorio-appointment-item__date {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        padding: 0.55rem 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .consultorio-stat-card,
+    .consultorio-quick-action {
+        transition: none;
+    }
+
+    .consultorio-stat-card:hover,
+    .consultorio-quick-action:hover {
+        transform: none;
+    }
+}

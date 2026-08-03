@@ -1,0 +1,135 @@
+:root {
+    --app-font-scale: 1;
+    --app-font-weight: 400;
+    --app-heading-weight: 700;
+}
+
+html {
+    font-size: calc(16px * var(--app-font-scale));
+}
+
+body {
+    font-weight: var(--app-font-weight);
+}
+
+h1, h2, h3, h4, h5, h6,
+.auth-brand-name,
+.consultorio-page-header h1,
+.psychologist-patients-header h1 {
+    font-weight: var(--app-heading-weight);
+}
+
+/* No reforzar iconos ni tipografías de librerías de iconos. */
+.bi,
+[class^="bi-"],
+[class*=" bi-"],
+.fa,
+.fas,
+.far,
+.fab {
+    font-weight: normal !important;
+}
+
+html[data-bold-text="true"] label,
+html[data-bold-text="true"] .form-label,
+html[data-bold-text="true"] .nav-link,
+html[data-bold-text="true"] .table th,
+html[data-bold-text="true"] .btn {
+    font-weight: 600;
+}
+
+html[data-bold-text="true"] .btn .bi,
+html[data-bold-text="true"] .nav-link .bi {
+    font-weight: normal !important;
+}
+
+.pm-apariencia-panel {
+    border: 1px solid rgba(101, 113, 102, 0.18);
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+}
+
+.pm-apariencia-panel h3,
+.pm-apariencia-panel legend {
+    font-size: 1.05rem;
+    margin: 0 0 0.75rem;
+    color: #657166;
+}
+
+.pm-apariencia-preview {
+    margin: 0.85rem 0 1rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: #DAEBE3;
+    color: #657166;
+}
+
+.pm-apariencia-controls {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.pm-apariencia-field label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+    color: #657166;
+}
+
+.pm-apariencia-field select {
+    width: 100%;
+    max-width: 280px;
+}
+
+.pm-toast-host {
+    position: fixed;
+    z-index: 1200;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: min(360px, calc(100vw - 1.5rem));
+    pointer-events: none;
+}
+
+.pm-toast {
+    pointer-events: auto;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 12px 28px rgba(55, 70, 60, 0.16);
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    background: #fff;
+    color: #657166;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.pm-toast.is-success {
+    background: #DAEBE3;
+}
+
+.pm-toast.is-error {
+    background: #F3C3B2;
+}
+
+.pm-toast__close {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+@media (max-width: 767.98px) {
+    .pm-toast-host {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(420px, calc(100vw - 1.5rem));
+    }
+}

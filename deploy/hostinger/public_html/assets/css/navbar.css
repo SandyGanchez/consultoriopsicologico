@@ -1,0 +1,151 @@
+.navbar-public{
+    z-index:1030;
+    min-height:72px;
+    padding-top:.65rem;
+    padding-bottom:.65rem;
+    background:#FFFFFF;
+    border-bottom:1px solid rgba(153,205,216,.28);
+    box-shadow:none;
+    transition:box-shadow .2s ease;
+}
+
+.navbar-public--scrolled{
+    box-shadow:0 8px 24px rgba(101,113,102,.1);
+}
+
+.navbar-public .navbar-brand{
+    max-width:min(100%,320px);
+    text-decoration:none;
+}
+
+.navbar-public__logo{
+    width:48px;
+    height:48px;
+    flex:0 0 48px;
+    object-fit:cover;
+    border-radius:50%;
+    background:#DAEBE3;
+}
+
+.navbar-public__logo-fallback{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:48px;
+    height:48px;
+    flex:0 0 48px;
+    border-radius:50%;
+    background:#DAEBE3;
+    color:#657166;
+    font-size:1.25rem;
+    font-weight:700;
+}
+
+.navbar-public__brand-text{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    line-height:1.2;
+}
+
+.navbar-public__name{
+    overflow:hidden;
+    color:#657166;
+    font-weight:700;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+}
+
+.navbar-public__tagline{
+    color:#99CDD8;
+    font-size:.78rem;
+}
+
+.navbar-public__link{
+    color:#657166 !important;
+    font-weight:500;
+    margin:0 .35rem;
+}
+
+.navbar-public__link:hover,
+.navbar-public__link:focus{
+    color:#99CDD8 !important;
+}
+
+.navbar-public__link.is-active{
+    color:#657166 !important;
+    box-shadow:inset 0 -2px 0 #99CDD8;
+}
+
+.navbar-public__cta{
+    background:#99CDD8;
+    border:none;
+}
+
+.navbar-public__cta:hover,
+.navbar-public__cta:focus{
+    background:#7fb9c6;
+    color:#FFFFFF;
+}
+
+.navbar-public__cta--disabled{
+    opacity:.65;
+    cursor:not-allowed;
+    background:#CFD6C4;
+}
+
+.navbar-public .navbar-toggler{
+    border-color:rgba(101,113,102,.25);
+}
+
+.navbar-public .navbar-toggler:focus{
+    box-shadow:0 0 0 .2rem rgba(153,205,216,.35);
+}
+
+.btn-outline-secondary{
+    border-color:#657166;
+    color:#657166;
+}
+
+.btn-outline-secondary:hover{
+    background:#657166;
+    color:#FFFFFF;
+}
+
+/* Compensación de navbar sticky para anclas */
+#inicio,
+#nosotros,
+#servicios,
+#especialistas,
+#horarios,
+#ubicacion,
+#contacto,
+#consultorios,
+#redes{
+    scroll-margin-top:88px;
+}
+
+@media (max-width:991.98px){
+    .navbar-public .navbar-collapse{
+        position:relative;
+        z-index:1040;
+        background:#FFFFFF;
+        border-radius:0 0 1rem 1rem;
+        box-shadow:0 12px 28px rgba(101,113,102,.12);
+        padding-inline:.5rem;
+    }
+
+    .navbar-public__links{
+        padding:1rem 0 1.25rem;
+    }
+
+    .navbar-public__link{
+        margin:0;
+        padding:.65rem 0;
+    }
+
+    .navbar-public__link.is-active{
+        box-shadow:none;
+        font-weight:700;
+    }
+}

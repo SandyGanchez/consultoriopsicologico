@@ -1,0 +1,471 @@
+.psicologo-agenda-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.psicologo-agenda-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.psicologo-agenda-header h1 {
+    color: #657166;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.psicologo-agenda-header p {
+    color: #657166;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.psicologo-agenda-add-btn {
+    width: 3rem;
+    height: 3rem;
+    border: none;
+    border-radius: 50%;
+    background: #657166;
+    color: #FFFFFF;
+    font-size: 1.35rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(101, 113, 102, 0.25);
+    flex-shrink: 0;
+}
+
+.psicologo-agenda-add-btn:hover:not(:disabled) {
+    background: #99CDD8;
+    color: #657166;
+}
+
+.psicologo-agenda-add-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.psicologo-agenda-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.psicologo-agenda-filter label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #657166;
+}
+
+.psicologo-agenda-filter .form-select {
+    min-width: 180px;
+    min-height: 42px;
+    border-radius: 12px;
+    border-color: rgba(101, 113, 102, 0.2);
+}
+
+.psicologo-agenda-filter-btn {
+    min-height: 42px;
+    border: 0;
+    border-radius: 12px;
+    background: #99CDD8;
+    color: #657166;
+    font-weight: 700;
+}
+
+.psicologo-agenda-filter-btn:hover {
+    background: #86beca;
+    color: #657166;
+}
+
+.psicologo-agenda-clear-btn {
+    min-height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(101, 113, 102, 0.2);
+    background: #FFFFFF;
+    color: #657166;
+}
+
+.psicologo-agenda-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    font-size: 0.78rem;
+    color: #657166;
+}
+
+.psicologo-agenda-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.psicologo-agenda-panel {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    padding: 1rem;
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.08);
+}
+
+#calendarioPsicologo {
+    --fc-border-color: rgba(101, 113, 102, 0.16);
+    --fc-page-bg-color: #ffffff;
+    --fc-neutral-bg-color: #f7f9f8;
+    --fc-today-bg-color: rgba(218, 235, 227, 0.45);
+    --fc-button-bg-color: #99CDD8;
+    --fc-button-border-color: #99CDD8;
+    --fc-button-hover-bg-color: #86beca;
+    --fc-button-hover-border-color: #86beca;
+    --fc-button-active-bg-color: #657166;
+    --fc-button-active-border-color: #657166;
+}
+
+#calendarioPsicologo .fc-toolbar-title {
+    color: #657166;
+    font-weight: 800;
+}
+
+#calendarioPsicologo .fc-event {
+    border: 0;
+    border-left: 4px solid rgba(101, 113, 102, 0.35);
+    border-radius: 8px;
+    padding: 2px 4px;
+    color: #657166;
+    cursor: pointer;
+}
+
+#calendarioPsicologo .cita-programada {
+    background-color: #99CDD8;
+}
+
+#calendarioPsicologo .cita-asistida {
+    background-color: #CFD6C4;
+}
+
+#calendarioPsicologo .cita-cancelada {
+    background-color: #F3C3B2;
+}
+
+#calendarioPsicologo .cita-inasistencia {
+    background-color: #657166;
+    color: #FFFFFF;
+}
+
+.psicologo-agenda-modal {
+    border: 0;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.psicologo-agenda-modal .modal-header {
+    background: #DAEBE3;
+    border-bottom: 0;
+}
+
+.psicologo-agenda-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 0;
+}
+
+.psicologo-agenda-details div {
+    padding: 0.85rem;
+    border-radius: 12px;
+    background: rgba(218, 235, 227, 0.35);
+}
+
+.psicologo-agenda-details dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.psicologo-agenda-details dd {
+    margin: 0;
+    color: #657166;
+    font-weight: 600;
+}
+
+.agenda-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.agenda-dot.programada {
+    background-color: #99CDD8;
+}
+
+.agenda-dot.asistida {
+    background-color: #CFD6C4;
+}
+
+.agenda-dot.cancelada {
+    background-color: #F3C3B2;
+}
+
+.agenda-dot.inasistencia {
+    background-color: #657166;
+}
+
+.agenda-status {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.agenda-status.status-programada {
+    background: #99CDD8;
+    color: #657166;
+}
+
+.agenda-status.status-asistida {
+    background: #CFD6C4;
+    color: #657166;
+}
+
+.agenda-status.status-cancelada {
+    background: #F3C3B2;
+    color: #657166;
+}
+
+.agenda-status.status-inasistencia {
+    background: #657166;
+    color: #FFFFFF;
+}
+
+@media (max-width: 767.98px) {
+    .psicologo-agenda-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+.psi-day-past {
+    opacity: 0.45;
+    cursor: not-allowed !important;
+}
+
+.psi-day-past .fc-daygrid-day-number {
+    cursor: not-allowed;
+}
+
+.psi-day-selected {
+    background: rgba(218, 235, 227, 0.75) !important;
+}
+
+.psi-day-selected .fc-daygrid-day-number {
+    color: #657166;
+    font-weight: 800;
+}
+
+.psi-nueva-cita-fecha-legible {
+    margin-top: 0.45rem;
+    margin-bottom: 0;
+    color: #657166;
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.psi-nueva-cita-ayuda {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    color: rgba(101, 113, 102, 0.8);
+    font-size: 0.85rem;
+}
+
+.psi-agenda-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.65rem;
+}
+
+.psi-agenda-slot {
+    border: 1px solid #99CDD8;
+    background: #FFFFFF;
+    color: #657166;
+    border-radius: 999px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.psi-agenda-slot:hover {
+    background: #DAEBE3;
+}
+
+.psi-agenda-slot:focus-visible {
+    outline: 2px solid #657166;
+    outline-offset: 2px;
+}
+
+.psi-agenda-slot-selected {
+    background: #657166;
+    border-color: #657166;
+    color: #FFFFFF;
+}
+
+.psi-nueva-cita-resumen {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 14px;
+    background: rgba(218, 235, 227, 0.35);
+    border: 1px solid rgba(153, 205, 216, 0.45);
+}
+
+.psi-nueva-cita-resumen__title {
+    color: #657166;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.psi-nueva-cita-resumen__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.psi-nueva-cita-resumen__list div {
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    background: #FFFFFF;
+}
+
+.psi-nueva-cita-resumen__list dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.psi-nueva-cita-resumen__list dd {
+    margin: 0;
+    color: #657166;
+    font-weight: 600;
+}
+
+.psi-btn-guardar-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#btnGuardarNuevaCita:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.psi-agenda-toast-container {
+    z-index: 1090;
+    top: 5.5rem !important;
+}
+
+.psi-toast-error {
+    background: #F3C3B2;
+    border: 1px solid rgba(101, 113, 102, 0.35);
+    color: #657166;
+}
+
+.psi-toast-error .toast-header {
+    background: #F3C3B2;
+    color: #657166;
+    border-bottom-color: rgba(101, 113, 102, 0.15);
+}
+
+.psi-toast-info {
+    background: #DAEBE3;
+    border: 1px solid rgba(101, 113, 102, 0.2);
+    color: #657166;
+}
+
+.psi-toast-info .toast-header {
+    background: #DAEBE3;
+    color: #657166;
+    border-bottom-color: rgba(101, 113, 102, 0.12);
+}
+
+.psi-toast-success {
+    background: #DAEBE3;
+    border: 1px solid rgba(101, 113, 102, 0.2);
+    color: #657166;
+}
+
+.psi-toast-success .toast-header {
+    background: #DAEBE3;
+    color: #657166;
+    border-bottom-color: rgba(101, 113, 102, 0.12);
+}
+
+.psi-toast-warning {
+    background: #FDE8D3;
+    border: 1px solid rgba(101, 113, 102, 0.25);
+    color: #657166;
+}
+
+.psi-toast-warning .toast-header {
+    background: #FDE8D3;
+    color: #657166;
+    border-bottom-color: rgba(101, 113, 102, 0.12);
+}
+
+.psi-toast-error .toast-body,
+.psi-toast-info .toast-body,
+.psi-toast-success .toast-body,
+.psi-toast-warning .toast-body {
+    color: #657166;
+}
+
+.psi-asistencia-aviso {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: #DAEBE3;
+    color: #657166;
+    font-size: 0.92rem;
+}
+
+.psi-asistencia-aviso--warn {
+    background: #FDE8D3;
+}
+
+.psi-asistencia-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.psi-asistencia-clinica {
+    margin-top: 1rem;
+}
+
+.psi-asistencia-clinica__texto {
+    margin: 0.5rem 0 0;
+    color: #657166;
+}
+
+#fechaNuevaCita.is-invalid {
+    border-color: #c87962;
+}
+
+@media (max-width: 767.98px) {
+    .psi-nueva-cita-resumen__list {
+        grid-template-columns: 1fr;
+    }
+}

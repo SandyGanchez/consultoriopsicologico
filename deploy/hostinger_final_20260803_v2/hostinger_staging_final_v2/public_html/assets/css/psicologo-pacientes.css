@@ -1,0 +1,636 @@
+.psychologist-patients-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.psychologist-patients-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.psychologist-patients-header h1 {
+    color: #657166;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+}
+
+.psychologist-patients-header p {
+    color: #657166;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.psychologist-patients-total {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 16px;
+    padding: 0.85rem 1.15rem;
+    color: #657166;
+    box-shadow: 0 8px 20px rgba(101, 113, 102, 0.08);
+}
+
+.psychologist-patients-total span {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.psychologist-patients-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.psychologist-patients-search {
+    position: relative;
+    flex: 1 1 280px;
+    min-width: 220px;
+}
+
+.psychologist-patients-search i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #657166;
+    opacity: 0.7;
+}
+
+.psychologist-patients-search input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid rgba(101, 113, 102, 0.2);
+    border-radius: 999px;
+    padding: 0.65rem 1rem 0.65rem 2.6rem;
+    background: #FFFFFF;
+    color: #657166;
+}
+
+.psychologist-patients-search input:focus {
+    outline: none;
+    border-color: #99CDD8;
+    box-shadow: 0 0 0 0.2rem rgba(153, 205, 216, 0.25);
+}
+
+.psychologist-patients-search-btn,
+.psychologist-patients-primary-btn {
+    min-height: 46px;
+    border: 0;
+    border-radius: 999px;
+    background: #657166;
+    color: #FFFFFF;
+    font-weight: 700;
+    padding: 0.55rem 1.25rem;
+}
+
+.psychologist-patients-search-btn:hover,
+.psychologist-patients-primary-btn:hover {
+    background: #99CDD8;
+    color: #657166;
+}
+
+.psychologist-patients-secondary-btn {
+    min-height: 42px;
+    border: 1px solid rgba(101, 113, 102, 0.2);
+    border-radius: 999px;
+    background: #FFFFFF;
+    color: #657166;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+}
+
+.psychologist-patients-secondary-btn:hover:not(:disabled) {
+    background: #DAEBE3;
+    color: #657166;
+}
+
+.psychologist-patients-secondary-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.psychologist-patients-link-btn {
+    min-height: 42px;
+    border: 0;
+    background: transparent;
+    color: #657166;
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0.45rem 0.5rem;
+}
+
+.psychologist-patients-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.psychologist-patients-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0.35rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid rgba(101, 113, 102, 0.18);
+    background: #FFFFFF;
+    color: #657166;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.psychologist-patients-filter-chip.is-active,
+.psychologist-patients-filter-chip:hover {
+    background: #DAEBE3;
+    border-color: #99CDD8;
+    color: #657166;
+}
+
+.psychologist-patients-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.psychologist-patient-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.08);
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.psychologist-patient-card__top {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.psychologist-patient-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: #DAEBE3;
+    color: #657166;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-weight: 800;
+}
+
+.psychologist-patient-avatar--lg {
+    width: 84px;
+    height: 84px;
+    font-size: 1.4rem;
+}
+
+.psychologist-patient-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.psychologist-patient-card__identity {
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+.psychologist-patient-card__identity h1,
+.psychologist-patient-card__identity h2 {
+    color: #657166;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+}
+
+.psychologist-patient-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #657166;
+    background: #F8F9FA;
+}
+
+.psychologist-patient-status--con-cita-proxima {
+    background: #99CDD8;
+}
+
+.psychologist-patient-status--atendido {
+    background: #CFD6C4;
+}
+
+.psychologist-patient-status--historico {
+    background: #FDE8D3;
+}
+
+.psychologist-patient-status--cita-programada {
+    background: #99CDD8;
+}
+
+.psychologist-patient-status--cita-asistida {
+    background: #CFD6C4;
+}
+
+.psychologist-patient-status--cita-cancelada {
+    background: #F3C3B2;
+}
+
+.psychologist-patient-status--cita-inasistencia {
+    background: #F8F9FA;
+}
+
+.psychologist-patient-contact p {
+    margin: 0 0 0.35rem;
+    color: #657166;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.psychologist-patient-contact p:last-child {
+    margin-bottom: 0;
+}
+
+.psychologist-patient-appointments {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.psychologist-patient-appointments span {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(101, 113, 102, 0.75);
+    margin-bottom: 0.2rem;
+}
+
+.psychologist-patient-appointments strong {
+    color: #657166;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.psychologist-patient-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.psychologist-patients-empty {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.08);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    color: #657166;
+}
+
+.psychologist-patients-empty i {
+    font-size: 2.5rem;
+    color: #99CDD8;
+}
+
+.psychologist-patients-empty h2 {
+    margin: 0.85rem 0 0.4rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.psychologist-patients-empty--compact {
+    padding: 1.25rem;
+}
+
+.psychologist-patients-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #657166;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.psychologist-patients-back:hover {
+    color: #99CDD8;
+}
+
+.psychologist-patient-detail-card .psychologist-patient-card__top {
+    align-items: flex-start;
+}
+
+.psychologist-patient-detail__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.psychologist-patient-age {
+    margin: 0.45rem 0 0;
+    color: rgba(101, 113, 102, 0.85);
+    font-size: 0.9rem;
+}
+
+.psychologist-patient-clinical-note {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: #FDE8D3;
+    color: #657166;
+    font-size: 0.9rem;
+}
+
+.psychologist-patient-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.psychologist-patient-summary-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    padding: 1.15rem;
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.08);
+}
+
+.psychologist-patient-summary-card h2 {
+    margin: 0 0 0.65rem;
+    color: #657166;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.psychologist-patient-summary-card__value {
+    margin: 0;
+    color: #657166;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.psychologist-patient-summary-card__meta,
+.psychologist-patient-summary-card__empty {
+    margin: 0.35rem 0 0;
+    color: rgba(101, 113, 102, 0.8);
+    font-size: 0.9rem;
+}
+
+.psychologist-patient-history {
+    background: #FFFFFF;
+    border: 1px solid rgba(207, 214, 196, 0.65);
+    border-radius: 18px;
+    padding: 1.15rem;
+    box-shadow: 0 10px 24px rgba(101, 113, 102, 0.08);
+}
+
+.psychologist-patient-history h2 {
+    margin: 0 0 1rem;
+    color: #657166;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.psychologist-patient-history-table {
+    --bs-table-bg: transparent;
+    margin: 0;
+    color: #657166;
+}
+
+.psychologist-patient-history-table thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom-color: rgba(101, 113, 102, 0.12);
+}
+
+.psychologist-patient-ficha-personal {
+    margin: 0 0 1.5rem;
+}
+
+.psi-paciente-ficha-dl {
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.psi-paciente-ficha-dl > div {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.psi-paciente-ficha-dl dt {
+    margin: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.psi-paciente-ficha-dl dd {
+    margin: 0;
+    color: #657166;
+    font-weight: 600;
+}
+
+.psi-paciente-pendientes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+}
+
+.psi-paciente-pendientes li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.35rem 0.75rem;
+    color: #657166;
+    font-weight: 600;
+}
+
+.psi-paciente-pendientes span {
+    font-weight: 500;
+    color: rgba(101, 113, 102, 0.8);
+    font-size: 0.92rem;
+}
+
+.psi-completar-info__card {
+    background: #fff;
+    border: 1px solid rgba(207, 214, 196, 0.7);
+    border-radius: 20px;
+    padding: 1.35rem;
+    box-shadow: 0 12px 28px rgba(101, 113, 102, 0.08);
+    max-width: 720px;
+}
+
+.psi-completar-info__header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+}
+
+.psi-completar-info__header h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.35rem;
+    color: #657166;
+}
+
+.psi-completar-info__nombre {
+    margin: 0;
+    font-weight: 700;
+    color: #657166;
+}
+
+.psi-completar-info__meta,
+.psi-completar-info__nota {
+    margin: 0.2rem 0 0;
+    color: rgba(101, 113, 102, 0.85);
+}
+
+.psi-completar-info__form {
+    display: grid;
+    gap: 1.15rem;
+}
+
+.psi-completar-info__section {
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid rgba(207, 214, 196, 0.75);
+    border-radius: 16px;
+    display: grid;
+    gap: 0.9rem;
+}
+
+.psi-completar-info__section legend {
+    float: left;
+    width: 100%;
+    padding: 0 0 0.55rem;
+    margin: 0;
+    font-weight: 700;
+    color: #657166;
+}
+
+.psi-completar-info__field {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.psi-completar-info__field label {
+    font-weight: 600;
+    color: #657166;
+}
+
+.psi-completar-info__optional {
+    font-weight: 500;
+    color: rgba(101, 113, 102, 0.75);
+    font-size: 0.9em;
+}
+
+.psi-completar-info__field input,
+.psi-completar-info__field select,
+.psi-completar-info__field textarea {
+    width: 100%;
+    border: 1px solid rgba(101, 113, 102, 0.25);
+    border-radius: 12px;
+    padding: 0.7rem 0.85rem;
+    color: #657166;
+    background: #fff;
+}
+
+.psi-completar-info__field input:focus,
+.psi-completar-info__field select:focus,
+.psi-completar-info__field textarea:focus {
+    outline: 3px solid rgba(218, 235, 227, 0.95);
+    border-color: #8FAE9C;
+}
+
+.psi-completar-info__field.has-error input,
+.psi-completar-info__field.has-error select,
+.psi-completar-info__field.has-error textarea {
+    border-color: #E8A0A0;
+}
+
+.psi-completar-info__help {
+    color: rgba(101, 113, 102, 0.75);
+}
+
+.psi-completar-info__error {
+    margin: 0;
+    color: #B15C5C;
+    font-size: 0.9rem;
+}
+
+.psi-completar-info__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+@media (max-width: 575.98px) {
+    .psi-completar-info__header {
+        flex-direction: column;
+    }
+
+    .psi-completar-info__actions {
+        flex-direction: column-reverse;
+    }
+
+    .psi-completar-info__actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .psychologist-patient-appointments {
+        grid-template-columns: 1fr;
+    }
+
+    .psychologist-patient-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .psychologist-patient-detail__actions {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .psychologist-patients-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .psychologist-patient-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .psychologist-patient-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}

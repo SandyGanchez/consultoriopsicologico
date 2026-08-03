@@ -1,0 +1,137 @@
+﻿INVENTARIO PAQUETE hostinger_final_20260803_v2
+Generado: 2026-08-03 02:40:19 America/Mexico_City (approx local)
+
+=== privado_hostinger.zip (raíz) ===
+app/
+composer.json
+composer.lock
+database/
+routes/
+storage/
+vendor/
+
+=== privado — migraciones ===
+database/migrations/
+database/migrations/2026_08_02_activacion_cuenta.sql
+database/migrations/2026_08_02_consentimiento_datos_personales.sql
+database/migrations/2026_08_02_correo_cita.sql
+database/migrations/2026_08_02_publicacion_consultorio.sql
+database/migrations/2026_08_02_redes_sociales.sql
+database/migrations/2026_08_02_sugerencia_servicio.sql
+database/migrations/2026_08_03_incidencia_soporte.sql
+database/migrations/2026_08_03_incidencia_soporte_enrutamiento.sql
+database/migrations/2026_08_03_tipo_recuperacion_consultorio.sql
+
+=== privado — scripts ===
+database/scripts/
+database/scripts/procesar_correos_citas.php
+
+=== privado — archivos clave UI recientes ===
+INCLUDED: app/Views/consultorio/dashboard.php
+INCLUDED: app/Views/layouts/sidebarConsultorio.php
+INCLUDED: app/Views/psicologo/partials/sidebar.php
+INCLUDED: app/Views/paciente/sidebarPaciente.php
+INCLUDED: app/Views/layouts/navbar_admin.php
+INCLUDED: app/Controllers/ConsultorioController.php
+INCLUDED: app/Models/Cita.php
+INCLUDED: app/Models/CorreoCita.php
+INCLUDED: app/Services/CorreoCitaService.php
+INCLUDED: app/Services/IncidenciaSoporteService.php
+
+=== public_html_hostinger.zip (raíz) ===
+.htaccess
+assets/
+index.php
+uploads/
+assets/css/
+assets/js/
+assets/js/apariencia-early.js
+assets/js/apariencia.js
+assets/js/app.js
+assets/js/bootstrap.bundle.js
+assets/js/bootstrap.bundle.js.map
+assets/js/bootstrap.bundle.min.js
+assets/js/bootstrap.bundle.min.js.map
+assets/js/bootstrap.esm.js
+assets/js/bootstrap.esm.js.map
+assets/js/bootstrap.esm.min.js
+assets/js/bootstrap.esm.min.js.map
+assets/js/bootstrap.js
+assets/js/bootstrap.js.map
+assets/js/bootstrap.min.js
+assets/js/bootstrap.min.js.map
+assets/js/cambio-correo-guard.js
+assets/js/consultorio-configuracion.js
+assets/js/consultorio.js
+assets/js/home-especialistas.js
+assets/js/home-ubicacion.js
+assets/js/login.js
+assets/js/navbar-public.js
+assets/js/notificaciones-campana.js
+assets/js/paciente-agendar.js
+assets/js/paciente.js
+assets/js/pm-toasts.js
+assets/js/psicologo-agenda.js
+assets/js/psicologo-configuracion.js
+assets/js/psicologo-expediente.js
+assets/js/psicologo-pendientes-vivo.js
+assets/js/psicologo.js
+assets/js/register.js
+assets/css/animate.min.css
+assets/css/apariencia.css
+assets/css/bootstrap-grid.css
+assets/css/bootstrap-grid.css.map
+assets/css/bootstrap-grid.min.css
+assets/css/bootstrap-grid.min.css.map
+assets/css/bootstrap-grid.rtl.css
+assets/css/bootstrap-grid.rtl.css.map
+assets/css/bootstrap-grid.rtl.min.css
+assets/css/bootstrap-grid.rtl.min.css.map
+assets/css/bootstrap-reboot.css
+assets/css/bootstrap-reboot.css.map
+assets/css/bootstrap-reboot.min.css
+assets/css/bootstrap-reboot.min.css.map
+assets/css/bootstrap-reboot.rtl.css
+assets/css/bootstrap-reboot.rtl.css.map
+assets/css/bootstrap-reboot.rtl.min.css
+assets/css/bootstrap-reboot.rtl.min.css.map
+assets/css/bootstrap-utilities.css
+assets/css/bootstrap-utilities.css.map
+assets/css/bootstrap-utilities.min.css
+assets/css/bootstrap-utilities.min.css.map
+assets/css/bootstrap-utilities.rtl.css
+assets/css/bootstrap-utilities.rtl.css.map
+assets/css/bootstrap-utilities.rtl.min.css
+assets/css/bootstrap-utilities.rtl.min.css.map
+assets/css/bootstrap.css
+assets/css/bootstrap.css.map
+assets/css/bootstrap.min.css
+assets/css/bootstrap.min.css.map
+assets/css/bootstrap.rtl.css
+assets/css/bootstrap.rtl.css.map
+assets/css/bootstrap.rtl.min.css
+assets/css/bootstrap.rtl.min.css.map
+assets/css/consultorio-configuracion.css
+assets/css/consultorio-dashboard.css
+assets/css/consultorio-servicios.css
+assets/css/consultorio.css
+assets/css/home.css
+assets/css/login.css
+assets/css/navbar.css
+assets/css/notificaciones-campana.css
+
+=== public — CSS/JS clave ===
+INCLUDED: assets/css/consultorio.css
+INCLUDED: assets/css/consultorio-dashboard.css
+INCLUDED: assets/css/psicologo.css
+INCLUDED: assets/css/paciente.css
+INCLUDED: assets/js/consultorio.js
+INCLUDED: assets/js/psicologo.js
+INCLUDED: assets/js/paciente.js
+
+=== EXCLUIDO ===
+.env / secretos / .git / node_modules / proposed/ / humo_* / aplicar_* / dumps SQL / fotos de prueba en uploads
+
+Tamaño privado: 660207 bytes
+Tamaño público: 1696009 bytes
+PHP: 8.2.12 | Composer: 2.8.12 | composer install --no-dev --optimize-autoloader

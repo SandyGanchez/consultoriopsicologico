@@ -1,0 +1,2 @@
+-- MOVIDA a database/migrations/2026_08_03_incidencia_soporte.sql
+-- No aplicar desde aquí.

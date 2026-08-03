@@ -1,0 +1,14 @@
+{
+    "name": "consultorio/psicologico",
+    "description": "Sistema web para consultorio psicologico",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "phpmailer/phpmailer": "^7.1"
+    }
+}

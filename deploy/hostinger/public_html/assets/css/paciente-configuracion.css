@@ -1,0 +1,169 @@
+/*=====================================
+=     CONFIGURACIÓN PACIENTE          =
+=====================================*/
+
+.paciente-config-page {
+    --pcfg-primary: #657166;
+    --pcfg-soft-blue: #99CDD8;
+    --pcfg-mint: #DAEBE3;
+    --pcfg-peach: #FDE8D3;
+    --pcfg-rose: #F3C3B2;
+    --pcfg-white: #FFFFFF;
+    --pcfg-bg: #F7F9F8;
+    --pcfg-shadow: 0 8px 22px rgba(101, 113, 102, 0.08);
+    color: var(--pcfg-primary);
+}
+
+.paciente-content:has(.paciente-config-page) {
+    padding: 1.5rem 1.25rem 2.5rem;
+    overflow-x: clip;
+    background: var(--pcfg-bg);
+}
+
+.paciente-config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem;
+}
+
+.paciente-config-card {
+    background: var(--pcfg-white);
+    border: 1px solid rgba(207, 214, 196, 0.75);
+    border-radius: 18px;
+    box-shadow: var(--pcfg-shadow);
+    padding: 1.25rem 1.3rem;
+}
+
+.paciente-config-card--full {
+    grid-column: 1 / -1;
+}
+
+.paciente-config-card-head {
+    display: flex;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.paciente-config-card-head > span {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #DAEBE3;
+    color: var(--pcfg-primary);
+    flex-shrink: 0;
+    font-size: 1.15rem;
+}
+
+.paciente-config-card-head h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.15rem;
+}
+
+.paciente-config-card-head p {
+    margin: 0;
+    color: #6d796e;
+    font-size: 0.9rem;
+}
+
+.paciente-config-current {
+    margin: 0 0 1rem;
+    color: #5f6b60;
+}
+
+.paciente-config-form {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.paciente-config-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.paciente-config-form label {
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.paciente-config-form input {
+    min-height: 2.55rem;
+    border: 1px solid rgba(153, 205, 216, 0.7);
+    border-radius: 12px;
+    padding: 0.5rem 0.8rem;
+    color: var(--pcfg-primary);
+}
+
+.paciente-config-form input:focus {
+    outline: 2px solid #99CDD8;
+    outline-offset: 1px;
+}
+
+.paciente-config-form small,
+.paciente-config-hint {
+    color: #6d796e;
+    font-size: 0.82rem;
+}
+
+.paciente-config-requirements {
+    margin: 0.25rem 0 0.5rem;
+    padding-left: 1.1rem;
+    color: #6d796e;
+    font-size: 0.85rem;
+}
+
+.paciente-config-verify {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.paciente-config-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.paciente-config-page .paciente-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0.55rem 1.15rem;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.paciente-config-page .paciente-btn-primary {
+    background: #657166;
+    color: #FFFFFF;
+}
+
+.paciente-config-page .paciente-btn-secondary {
+    background: #FFFFFF;
+    border-color: #99CDD8;
+    color: #657166;
+}
+
+.paciente-config-page .paciente-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.paciente-config-page .toast {
+    border: none;
+    border-radius: 14px;
+    box-shadow: var(--pcfg-shadow);
+}
+
+@media (max-width: 991.98px) {
+    .paciente-config-grid,
+    .paciente-config-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
