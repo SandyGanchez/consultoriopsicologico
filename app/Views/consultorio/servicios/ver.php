@@ -123,12 +123,6 @@ $activo = ($servicio['EstatusServicio'] ?? '') === 'ACTIVO';
                     Todavía no hay relaciones registradas para este servicio.
                 </p>
             <?php else: ?>
-                <p class="small text-muted mb-2">
-                    Precio y duración actuales del especialista
-                    (<code>PrecioServicio</code> / <code>DuracionMinutos</code>).
-                    No modifican el costo histórico de citas ya agendadas
-                    (<code>CostoAplicado</code>.
-                </p>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
                         <thead>

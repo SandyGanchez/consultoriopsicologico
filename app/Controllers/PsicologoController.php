@@ -228,9 +228,17 @@ public function actualizarPerfil(): void
         $errores[] = 'El apellido materno es obligatorio.';
     }
 
-    if ($datos['FechaNacimiento'] === '') {
-        $errores[] =
-            'La fecha de nacimiento es obligatoria.';
+    $validacionFecha = (new \App\Services\EdadService())
+        ->validarFechaNacimiento(
+            (string) ($datos['FechaNacimiento'] ?? ''),
+            'adulto'
+        );
+
+    if (empty($validacionFecha['ok'])) {
+        $errores[] = (string) (
+            $validacionFecha['mensaje']
+            ?? \App\Services\EdadService::MENSAJE_OBLIGATORIA
+        );
     }
 
     $generosPermitidos = [
@@ -892,6 +900,26 @@ public function guardarPacienteNuevo(): void
         $_SESSION['warning'] = $resultado['mensaje'];
     }
 
+    $clasificacionEdad = (new \App\Services\EdadService())
+        ->validarFechaNacimiento(
+            (string) ($datosPaciente['fechaNacimiento'] ?? ''),
+            'paciente'
+        );
+
+    if (
+        !empty($clasificacionEdad['ok'])
+        && ($clasificacionEdad['clasificacion'] ?? '')
+            === \App\Services\EdadService::CLASIFICACION_MENOR
+    ) {
+        $_SESSION['warning'] = \App\Services\EdadService::MENSAJE_ALTA_MENOR_PSICOLOGO
+            . (
+                !empty($resultado['correoEnviado'])
+                    ? ''
+                    : ' ' . (string) ($resultado['mensaje'] ?? '')
+            );
+        unset($_SESSION['success']);
+    }
+
     Response::redirect('psicologo/pacientes');
 }
 
@@ -949,25 +977,17 @@ private function validarDatosPacienteNuevo(
             'El apellido paterno es obligatorio.';
     }
 
-    if ($datosPaciente['fechaNacimiento'] === '') {
-        $errores['fechaNacimiento'] =
-            'La fecha de nacimiento es obligatoria.';
-    } else {
-        $fechaNac = \DateTimeImmutable::createFromFormat(
-            'Y-m-d',
-            $datosPaciente['fechaNacimiento']
+    $validacionFecha = (new \App\Services\EdadService())
+        ->validarFechaNacimiento(
+            (string) ($datosPaciente['fechaNacimiento'] ?? ''),
+            'paciente'
         );
 
-        if (
-            !$fechaNac ||
-            $fechaNac->format('Y-m-d') !== $datosPaciente['fechaNacimiento']
-        ) {
-            $errores['fechaNacimiento'] =
-                'La fecha de nacimiento no es válida.';
-        } elseif ($fechaNac > new \DateTimeImmutable('today')) {
-            $errores['fechaNacimiento'] =
-                'La fecha de nacimiento no puede ser futura.';
-        }
+    if (empty($validacionFecha['ok'])) {
+        $errores['fechaNacimiento'] = (string) (
+            $validacionFecha['mensaje']
+            ?? \App\Services\EdadService::MENSAJE_OBLIGATORIA
+        );
     }
 
     $generos = ['Masculino', 'Femenino', 'Otro'];
@@ -1220,6 +1240,23 @@ public function guardarCompletarInformacionPaciente(): void
             ?? 'Información del paciente actualizada correctamente.'
         )
     );
+
+    $fechaNacimientoPost = trim((string) ($_POST['FechaNacimiento'] ?? ''));
+    if ($fechaNacimientoPost !== '') {
+        $clasificacion = (new \App\Services\EdadService())
+            ->validarFechaNacimiento($fechaNacimientoPost, 'paciente');
+
+        if (
+            !empty($clasificacion['ok'])
+            && ($clasificacion['clasificacion'] ?? '')
+                === \App\Services\EdadService::CLASIFICACION_MENOR
+        ) {
+            Session::set(
+                'warning',
+                \App\Services\EdadService::MENSAJE_ALTA_MENOR_PSICOLOGO
+            );
+        }
+    }
 
     Response::redirect($rutaRetorno);
 }

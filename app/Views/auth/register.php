@@ -2,8 +2,11 @@
 
 use App\Helpers\Helper;
 use App\Core\Session;
+use App\Services\EdadService;
 
 require __DIR__ . '/partials/variables-identidad.php';
+
+$limitesEdad = (new EdadService())->limitesInput('adulto');
 
 ?>
 
@@ -101,9 +104,13 @@ require __DIR__ . '/partials/variables-identidad.php';
                                         type="date"
                                         name="fechaNacimiento"
                                         class="form-control form-control-sm"
-                                        max="<?= date('Y-m-d'); ?>"
+                                        min="<?= htmlspecialchars($limitesEdad['min'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        max="<?= htmlspecialchars($limitesEdad['max'], ENT_QUOTES, 'UTF-8'); ?>"
                                         required
                                     >
+                                    <div class="form-text small">
+                                        Debes tener al menos 18 años.
+                                    </div>
                                 </div>
                                 <div class="col-md-6 mb-2">
                                     <label class="form-label small mb-1">
@@ -207,12 +214,24 @@ require __DIR__ . '/partials/variables-identidad.php';
                         (function () {
                             var form = document.querySelector('form[action*="registro"]');
                             if (!form) return;
+                            var enviando = false;
+                            var btn = document.getElementById('btnCrearCuentaPaciente');
                             form.addEventListener('submit', function (e) {
                                 var a = form.querySelector('[name="aviso_leido"]');
                                 var s = form.querySelector('[name="consentimiento_sensibles"]');
                                 if (!a || !a.checked || !s || !s.checked) {
                                     e.preventDefault();
                                     alert('Debes marcar ambas confirmaciones de privacidad para crear la cuenta.');
+                                    return;
+                                }
+                                if (enviando) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                enviando = true;
+                                if (btn) {
+                                    btn.disabled = true;
+                                    btn.textContent = 'Creando cuenta…';
                                 }
                             });
                         })();

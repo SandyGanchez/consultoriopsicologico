@@ -993,15 +993,17 @@ private function validarDatosConsultorio(
             'El apellido materno del responsable es obligatorio.';
     }
 
-    if ($datos['fechaNacimientoResponsable'] === '') {
-        $errores['FechaNacimiento'] =
-            'La fecha de nacimiento es obligatoria.';
-    } elseif (!$this->fechaValida($datos['fechaNacimientoResponsable'])) {
-        $errores['FechaNacimiento'] =
-            'La fecha de nacimiento no es válida.';
-    } elseif ($datos['fechaNacimientoResponsable'] > date('Y-m-d')) {
-        $errores['FechaNacimiento'] =
-            'La fecha de nacimiento no puede ser futura.';
+    $validacionFecha = (new \App\Services\EdadService())
+        ->validarFechaNacimiento(
+            (string) ($datos['fechaNacimientoResponsable'] ?? ''),
+            'adulto'
+        );
+
+    if (empty($validacionFecha['ok'])) {
+        $errores['FechaNacimiento'] = (string) (
+            $validacionFecha['mensaje']
+            ?? \App\Services\EdadService::MENSAJE_OBLIGATORIA
+        );
     }
 
     if (

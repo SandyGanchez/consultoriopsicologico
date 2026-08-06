@@ -5,6 +5,7 @@ use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use RuntimeException;
+use Throwable;
 
 class MailService {
 
@@ -244,14 +245,23 @@ HTML;
             $mail->Password = $password;
             $mail->Port = $port;
             $mail->CharSet = PHPMailer::CHARSET_UTF8;
-           $mail->SMTPDebug = SMTP::DEBUG_OFF;
+            $mail->SMTPDebug = SMTP::DEBUG_OFF;
+            $this->aplicarLimitesSmtp($mail);
 
-$mail->Debugoutput = static function (
-    string $mensaje,
-    int $nivel
-): void {
-    error_log("SMTP [$nivel]: $mensaje");
-};
+            $mail->Debugoutput = static function (
+                string $mensaje,
+                int $nivel
+            ): void {
+                // Nunca registrar credenciales SMTP.
+                if (
+                    stripos($mensaje, 'pass') !== false
+                    || stripos($mensaje, 'password') !== false
+                ) {
+                    return;
+                }
+
+                error_log('SMTP [' . $nivel . ']: operación controlada');
+            };
 
             $mail->SMTPSecure =
                 $encryption === 'ssl'
@@ -1046,6 +1056,7 @@ HTML;
         $mail->Port = $port;
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
         $mail->SMTPDebug = SMTP::DEBUG_OFF;
+        $this->aplicarLimitesSmtp($mail);
         $mail->SMTPSecure =
             $encryption === 'ssl'
                 ? PHPMailer::ENCRYPTION_SMTPS
@@ -1053,5 +1064,43 @@ HTML;
         $mail->setFrom($fromAddress, $fromName);
 
         return $mail;
+    }
+
+    private function resolverTimeoutSmtp(): int
+    {
+        $timeout = (int) Config::get('MAIL_TIMEOUT', '15');
+
+        if ($timeout < 5 || $timeout > 60) {
+            return 15;
+        }
+
+        return $timeout;
+    }
+
+    private function resolverTimelimitSmtp(): int
+    {
+        $timelimit = (int) Config::get('MAIL_TIMELIMIT', '20');
+
+        if ($timelimit < 5 || $timelimit > 120) {
+            return 20;
+        }
+
+        return $timelimit;
+    }
+
+    private function aplicarLimitesSmtp(PHPMailer $mail): void
+    {
+        $timeout = $this->resolverTimeoutSmtp();
+        $timelimit = $this->resolverTimelimitSmtp();
+
+        $mail->Timeout = $timeout;
+
+        try {
+            $smtp = $mail->getSMTPInstance();
+            $smtp->Timeout = $timeout;
+            $smtp->Timelimit = $timelimit;
+        } catch (Throwable $e) {
+            error_log('MailService: no se pudo aplicar Timelimit SMTP.');
+        }
     }
 }

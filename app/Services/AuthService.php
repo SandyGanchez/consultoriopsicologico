@@ -9,7 +9,6 @@ use App\Models\Paciente;
 use App\Models\Persona;
 use App\Models\RecuperacionPassword;
 use App\Models\Usuario;
-use DateTime;
 use Exception;
 use RuntimeException;
 use Throwable;
@@ -120,15 +119,16 @@ class AuthService
             Response::redirect('registro');
         }
 
-        $validacionEdad = $privacidad->validarMayoriaDeEdad(
-            (string) ($datos['fechaNacimiento'] ?? '')
+        $validacionEdad = (new EdadService())->validarFechaNacimiento(
+            (string) ($datos['fechaNacimiento'] ?? ''),
+            'registro_publico'
         );
 
-        if (!$validacionEdad['ok']) {
+        if (empty($validacionEdad['ok'])) {
             Session::set(
                 'error',
                 (string) ($validacionEdad['mensaje'] ??
-                    PrivacidadService::MENSAJE_MENOR_EDAD)
+                    EdadService::MENSAJE_REGISTRO_PUBLICO_MENOR)
             );
             Response::redirect('registro');
         }
@@ -148,42 +148,6 @@ class AuthService
                 'error',
                 'No hay un consultorio configurado para registrar pacientes.'
             );
-            Response::redirect('registro');
-        }
-
-        $fechaNacimiento = DateTime::createFromFormat(
-            'Y-m-d',
-            $datos['fechaNacimiento']
-        );
-
-        $erroresFecha = DateTime::getLastErrors();
-
-        if (
-            !$fechaNacimiento ||
-            (
-                is_array($erroresFecha) &&
-                (
-                    $erroresFecha['warning_count'] > 0 ||
-                    $erroresFecha['error_count'] > 0
-                )
-            )
-        ) {
-            Session::set(
-                'error',
-                'La fecha de nacimiento no es válida.'
-            );
-
-            Response::redirect('registro');
-        }
-
-        $hoy = new DateTime('today');
-
-        if ($fechaNacimiento > $hoy) {
-            Session::set(
-                'error',
-                'La fecha de nacimiento no puede ser posterior a la fecha actual.'
-            );
-
             Response::redirect('registro');
         }
 
@@ -353,7 +317,9 @@ class AuthService
         return [
             'success' => false,
             'message' =>
-                'No se encontró una cuenta activa con ese correo.'
+                'Si el correo está asociado a una cuenta activa, '
+                . 'podrás continuar con la recuperación. '
+                . 'Verifica el correo e intenta nuevamente.'
         ];
     }
 
@@ -415,10 +381,10 @@ class AuthService
             $usuario['ClvUsu']
         );
 
-      $idRec = $recuperacionModel->crear(
-    $usuario['ClvUsu'],
-    $codigoHash
-);
+        $idRec = $recuperacionModel->crear(
+            $usuario['ClvUsu'],
+            $codigoHash
+        );
 
         try {
             (new MailService())->enviarCodigoRecuperacion(
@@ -428,12 +394,20 @@ class AuthService
             );
         } catch (Throwable $e) {
             /*
-             * El usuario no recibió el código, por lo que debe
-             * quedar inutilizable.
+             * SMTP falló: el código no debe quedar usable ni
+             * bloquear un reintento inmediato por cooldown.
              */
-            $recuperacionModel->marcarComoUtilizado($idRec);
+            $recuperacionModel->eliminarPorId($idRec);
 
-            throw $e;
+            error_log(
+                'Recuperación de contraseña: fallo SMTP al enviar código.'
+            );
+
+            return [
+                'success' => false,
+                'message' =>
+                    'No fue posible enviar el código. Intenta nuevamente.'
+            ];
         }
 
         return [
@@ -445,8 +419,7 @@ class AuthService
 
     } catch (Throwable $e) {
         error_log(
-            'Recuperación de contraseña: ' .
-            $e->getMessage()
+            'Recuperación de contraseña: error interno controlado.'
         );
 
         return [

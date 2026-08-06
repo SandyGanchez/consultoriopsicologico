@@ -2008,9 +2008,17 @@ private function validarDatosPsicologo(
             'El apellido materno es obligatorio.';
     }
 
-    if ($datos['fechaNacimiento'] === '') {
-        $errores['fechaNacimiento'] =
-            'La fecha de nacimiento es obligatoria.';
+    $validacionFecha = (new \App\Services\EdadService())
+        ->validarFechaNacimiento(
+            (string) ($datos['fechaNacimiento'] ?? ''),
+            'adulto'
+        );
+
+    if (empty($validacionFecha['ok'])) {
+        $errores['fechaNacimiento'] = (string) (
+            $validacionFecha['mensaje']
+            ?? \App\Services\EdadService::MENSAJE_OBLIGATORIA
+        );
     }
 
     $generosPermitidos = [
@@ -2050,9 +2058,6 @@ private function validarDatosPsicologo(
             'El teléfono debe contener 10 dígitos.';
     }
 
-  
-
- 
     if ($datos['cedulaProfesional'] === '') {
         $errores['cedulaProfesional'] =
             'La cédula profesional es obligatoria.';

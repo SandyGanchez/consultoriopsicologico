@@ -187,4 +187,20 @@ public function obtenerActivoPorId(
             'idRec' => $idRec
         ]);
     }
+
+    /**
+     * Elimina un registro de recuperación (p. ej. si SMTP falló
+     * antes de que el usuario pudiera usarlo).
+     */
+    public function eliminarPorId(int $idRec): bool
+    {
+        $sql = "DELETE FROM recuperacion_password
+                WHERE IdRec = :idRec";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'idRec' => $idRec
+        ]);
+    }
 }

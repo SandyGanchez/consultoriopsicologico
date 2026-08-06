@@ -2,11 +2,13 @@
 
 use App\Core\Session;
 use App\Helpers\Helper;
+use App\Services\EdadService;
 
 $datos = $datos ?? [];
 $errores = $errores ?? [];
 $modoEdicion = $modoEdicion ?? false;
 $csrf = Session::csrfToken();
+$limitesEdad = (new EdadService())->limitesInput('adulto');
 
 function valorCampo(array $datos, string $campo): string
 {
@@ -266,9 +268,14 @@ function claseInvalida(
                             $datos,
                             'fechaNacimiento'
                         ); ?>"
-                        max="<?= date('Y-m-d'); ?>"
+                        min="<?= htmlspecialchars($limitesEdad['min'], ENT_QUOTES, 'UTF-8'); ?>"
+                        max="<?= htmlspecialchars($limitesEdad['max'], ENT_QUOTES, 'UTF-8'); ?>"
                         required
                     >
+
+                    <div class="form-text">
+                        Debes tener al menos 18 años.
+                    </div>
 
                     <?php if (
                         isset($errores['fechaNacimiento'])
@@ -825,9 +832,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     actualizarContador();
 
+    let enviando = false;
+
     formulario?.addEventListener(
         'submit',
         event => {
+            if (enviando) {
+                event.preventDefault();
+                return;
+            }
+
             if (!formulario.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -839,6 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            enviando = true;
             botonGuardar.disabled = true;
 
             botonGuardar.innerHTML =

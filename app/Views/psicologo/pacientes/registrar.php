@@ -2,11 +2,13 @@
 
 use App\Core\Session;
 use App\Helpers\Helper;
+use App\Services\EdadService;
 
 $datos = $datos ?? [];
 $errores = $errores ?? [];
 $servicios = $servicios ?? [];
 $csrf = Session::csrfToken();
+$limitesEdad = (new EdadService())->limitesInput('paciente');
 
 $valor = static function (string $campo) use ($datos): string {
     return htmlspecialchars(
@@ -110,8 +112,13 @@ $urlHorarios = Helper::baseUrl(
                         name="fechaNacimiento"
                         id="fechaNacimiento"
                         value="<?= $valor('fechaNacimiento'); ?>"
+                        min="<?= htmlspecialchars($limitesEdad['min'], ENT_QUOTES, 'UTF-8'); ?>"
+                        max="<?= htmlspecialchars($limitesEdad['max'], ENT_QUOTES, 'UTF-8'); ?>"
                         required
                     >
+                    <div class="form-text">
+                        Selecciona una fecha válida. Los pacientes menores requieren autorización de su representante legal.
+                    </div>
                     <?php if (isset($errores['fechaNacimiento'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errores['fechaNacimiento']); ?></div>
                     <?php endif; ?>

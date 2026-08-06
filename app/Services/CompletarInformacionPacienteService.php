@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Cita;
 use App\Models\HistorialClinico;
 use App\Models\Paciente;
-use DateTimeImmutable;
 use RuntimeException;
 use Throwable;
 
@@ -621,11 +620,16 @@ class CompletarInformacionPacienteService
             }
 
             if ($campo === 'FechaNacimiento') {
-                $fecha = DateTimeImmutable::createFromFormat('Y-m-d', $valor);
-                if (!$fecha || $fecha->format('Y-m-d') !== $valor) {
-                    $errores[$campo] = 'La fecha de nacimiento no es válida.';
-                } elseif ($valor > date('Y-m-d')) {
-                    $errores[$campo] = 'La fecha de nacimiento no puede ser futura.';
+                $validacionFecha = (new EdadService())->validarFechaNacimiento(
+                    $valor,
+                    'paciente'
+                );
+
+                if (empty($validacionFecha['ok'])) {
+                    $errores[$campo] = (string) (
+                        $validacionFecha['mensaje']
+                        ?? EdadService::MENSAJE_FORMATO
+                    );
                 }
             }
 

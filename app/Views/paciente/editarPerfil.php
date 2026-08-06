@@ -1,6 +1,7 @@
 <?php
 
 use App\Helpers\Helper;
+use App\Services\EdadService;
 
 $escapar = static function ($valor): string {
     return htmlspecialchars(
@@ -9,6 +10,8 @@ $escapar = static function ($valor): string {
         'UTF-8'
     );
 };
+
+$limitesEdad = (new EdadService())->limitesInput('paciente');
 
 $perfil = is_array($perfil ?? null) ? $perfil : [];
 $errores = is_array($errores ?? null) ? $errores : [];
@@ -181,8 +184,13 @@ unset($_SESSION['error']);
                         id="FechaNacimiento"
                         name="FechaNacimiento"
                         required
+                        min="<?= $escapar($limitesEdad['min']); ?>"
+                        max="<?= $escapar($limitesEdad['max']); ?>"
                         value="<?= $escapar($valor('FechaNacimiento')); ?>"
                     >
+                    <small class="paciente-field-help">
+                        Selecciona una fecha válida. Los pacientes menores requieren autorización de su representante legal.
+                    </small>
                     <?php if (!empty($errores['FechaNacimiento'])): ?>
                         <em class="paciente-field-error">
                             <?= $escapar($errores['FechaNacimiento']); ?>

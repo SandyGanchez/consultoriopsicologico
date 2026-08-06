@@ -2,9 +2,11 @@
 
 use App\Core\Session;
 use App\Helpers\Helper;
+use App\Services\EdadService;
 
 $datos = is_array($datos ?? null) ? $datos : [];
 $errores = is_array($errores ?? null) ? $errores : [];
+$limitesEdad = (new EdadService())->limitesInput('adulto');
 
 $valor = static function (string $campo, string $default = '') use ($datos): string {
     return htmlspecialchars(
@@ -224,8 +226,11 @@ $genero = (string) ($datos['generoResponsable'] ?? '');
                             name="FechaNacimiento"
                             class="form-control <?= $clase('FechaNacimiento'); ?>"
                             value="<?= $valor('fechaNacimientoResponsable'); ?>"
+                            min="<?= htmlspecialchars($limitesEdad['min'], ENT_QUOTES, 'UTF-8'); ?>"
+                            max="<?= htmlspecialchars($limitesEdad['max'], ENT_QUOTES, 'UTF-8'); ?>"
                             required
                         >
+                        <div class="form-text">Debes tener al menos 18 años.</div>
                         <?php $error('FechaNacimiento'); ?>
                     </div>
                     <div class="col-md-6">

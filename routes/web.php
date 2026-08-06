@@ -606,12 +606,9 @@ return [
             'actualizarIncidencia'
         ],
 
-<<<<<<< HEAD
 '/paciente/cancelar-cita' => [
     PacienteController::class,
     'cancelarCita'
-=======
->>>>>>> 695ed54fd236f51b2874f2535f59aee5e67c49e3
 ],
 
 '/paciente/perfil/actualizar' => [
@@ -654,17 +651,6 @@ return [
     AdministradorController::class,
     'redirigirCuentaUnicaPost'
 ],
-
-'/paciente/cancelar-cita' => [
-    PacienteController::class,
-    'cancelarCita'
-],
-
-'/paciente/perfil/foto' => [
-    PacienteController::class,
-    'actualizarFoto'
-],
-    
 
 '/administrador/consultorios/desactivar/{id}' => [
     AdministradorController::class,

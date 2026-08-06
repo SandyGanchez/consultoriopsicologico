@@ -3,6 +3,7 @@
 use App\Core\Session;
 use App\Helpers\Helper;
 use App\Services\CompletarInformacionPacienteService;
+use App\Services\EdadService;
 
 $paciente = is_array($paciente ?? null) ? $paciente : [];
 $faltantes = is_array($faltantes ?? null) ? $faltantes : ['persona' => [], 'direccion' => []];
@@ -16,6 +17,7 @@ $mensajeError = $mensajeError ?? null;
 $clvPac = (string) ($paciente['ClvPac'] ?? '');
 $nombre = trim((string) ($paciente['NombrePaciente'] ?? ''));
 $csrf = Session::csrfToken();
+$limitesEdad = (new EdadService())->limitesInput('paciente');
 
 $h = static function ($valor): string {
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
@@ -56,7 +58,7 @@ $ayudas = [
     'NombrePer' => 'Solo letras, sin números.',
     'ApPatPer' => 'Solo letras, sin números.',
     'ApMatPer' => 'Solo letras, sin números.',
-    'FechaNacimiento' => 'No puede ser una fecha futura.',
+    'FechaNacimiento' => 'Selecciona una fecha válida. Los pacientes menores requieren autorización de su representante legal.',
     'GeneroPer' => 'Selecciona una opción válida.',
     'PaisDir' => 'País de residencia.',
     'EstadoDir' => 'Estado o entidad federativa.',
@@ -175,7 +177,8 @@ $primerError = $errores !== [] ? (string) array_key_first($errores) : '';
                                     id="<?= $h($id); ?>"
                                     name="<?= $h($campo); ?>"
                                     value="<?= $h($valor); ?>"
-                                    max="<?= $h(date('Y-m-d')); ?>"
+                                    min="<?= $h($limitesEdad['min']); ?>"
+                                    max="<?= $h($limitesEdad['max']); ?>"
                                     required
                                     aria-invalid="<?= $tieneError ? 'true' : 'false'; ?>"
                                 >
@@ -294,13 +297,31 @@ $primerError = $errores !== [] ? (string) array_key_first($errores) : '';
     </article>
 </section>
 
-<?php if ($primerError !== ''): ?>
 <script>
 (function () {
+    var form = document.getElementById('formCompletarInformacionPaciente');
+    var btn = form ? form.querySelector('button[type="submit"]') : null;
+    var enviando = false;
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            if (enviando) {
+                event.preventDefault();
+                return;
+            }
+            enviando = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Guardando…';
+            }
+        });
+    }
+
+    <?php if ($primerError !== ''): ?>
     var campo = document.getElementById(<?= json_encode('campo_' . $primerError); ?>);
     if (campo && typeof campo.focus === 'function') {
         campo.focus();
     }
+    <?php endif; ?>
 })();
 </script>
-<?php endif; ?>

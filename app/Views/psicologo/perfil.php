@@ -2,12 +2,15 @@
 
 use App\Core\Session;
 use App\Helpers\Helper;
+use App\Services\EdadService;
 
 $error = Session::get('error');
 $success = Session::get('success');
 
 Session::remove('error');
 Session::remove('success');
+
+$limitesEdad = (new EdadService())->limitesInput('adulto');
 
 $rutaFoto = Helper::fotoPerfilUrl(
     (string) ($perfil['FotoPerfilPer'] ?? '')
@@ -287,9 +290,13 @@ $inicialesPerfil = Helper::inicialesPersona(
                             ENT_QUOTES,
                             'UTF-8'
                         ); ?>"
-                        max="<?= date('Y-m-d'); ?>"
+                        min="<?= htmlspecialchars($limitesEdad['min'], ENT_QUOTES, 'UTF-8'); ?>"
+                        max="<?= htmlspecialchars($limitesEdad['max'], ENT_QUOTES, 'UTF-8'); ?>"
                         required
                     >
+                    <div class="form-text">
+                        Debes tener al menos 18 años.
+                    </div>
 
                 </div>
 
@@ -506,6 +513,28 @@ $inicialesPerfil = Helper::inicialesPersona(
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const formPerfil = document.querySelector(
+        'form[action*="psicologo/perfil"]'
+    );
+    const botonGuardar = formPerfil?.querySelector(
+        'button[type="submit"]'
+    );
+    let enviandoPerfil = false;
+
+    formPerfil?.addEventListener('submit', (event) => {
+        if (enviandoPerfil) {
+            event.preventDefault();
+            return;
+        }
+
+        enviandoPerfil = true;
+
+        if (botonGuardar) {
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = 'Guardando…';
+        }
+    });
+
     const inputFoto = document.getElementById(
         'FotoPerfilPer'
     );

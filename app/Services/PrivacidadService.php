@@ -622,28 +622,41 @@ class PrivacidadService
             ];
         }
 
-        try {
-            $nacimiento = new DateTimeImmutable($fechaNacimiento);
-            $hoy = new DateTimeImmutable('today');
-            $edad = (int) $nacimiento->diff($hoy)->y;
-        } catch (\Exception $e) {
-            return [
-                'ok' => false,
-                'mensaje' => 'La fecha de nacimiento no es válida.'
-            ];
-        }
+        $validacion = (new EdadService())->validarFechaNacimiento(
+            $fechaNacimiento,
+            'adulto'
+        );
 
-        if ($edad < 18) {
+        if (empty($validacion['ok'])) {
+            $mensajeBase = (string) ($validacion['mensaje'] ?? '');
+
+            if (
+                $mensajeBase === EdadService::MENSAJE_MAYORIA
+                || ($validacion['clasificacion'] ?? '') === EdadService::CLASIFICACION_MENOR
+            ) {
+                return [
+                    'ok' => false,
+                    'mensaje' => self::MENSAJE_MENOR_EDAD,
+                    'edad' => isset($validacion['edad'])
+                        ? (int) $validacion['edad']
+                        : null
+                ];
+            }
+
             return [
                 'ok' => false,
-                'mensaje' => self::MENSAJE_MENOR_EDAD,
-                'edad' => $edad
+                'mensaje' => $mensajeBase !== ''
+                    ? $mensajeBase
+                    : self::MENSAJE_MENOR_EDAD,
+                'edad' => isset($validacion['edad'])
+                    ? (int) $validacion['edad']
+                    : null
             ];
         }
 
         return [
             'ok' => true,
-            'edad' => $edad
+            'edad' => (int) $validacion['edad']
         ];
     }
 
