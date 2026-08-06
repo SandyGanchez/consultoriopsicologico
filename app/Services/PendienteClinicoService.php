@@ -133,7 +133,7 @@ class PendienteClinicoService
             return array_merge($base, [
                 'estado' => self::REGISTRAR_ASISTENCIA,
                 'mensaje' =>
-                    'La cita ya comenzó. Registra si el paciente asistió para continuar con la documentación clínica.',
+                    'Esta cita está pendiente de registrar asistencia.',
                 'etiquetaAccion' => 'Registrar asistencia',
                 'puedeRegistrarAsistencia' => true
             ]);

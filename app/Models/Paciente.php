@@ -1618,13 +1618,31 @@ public function obtenerParaPsicologo(
     return $this->enriquecerPacienteCatalogo($paciente);
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 public function listarCitasConPsicologo(
     string $clvPac,
-    string $clvPsi
+    string $clvPsi,
+    ?string $estado = null,
+    int $pagina = 1,
+    int $porPagina = 10
 ): array {
     if (!$this->perteneceAPsicologo($clvPac, $clvPsi)) {
         return [];
     }
+
+    $estado = strtoupper(trim((string) $estado));
+    $permitidos = [
+        'PROGRAMADA',
+        'ASISTIDA',
+        'CANCELADA',
+        'INASISTENCIA'
+    ];
+    $filtrarEstado = in_array($estado, $permitidos, true) ? $estado : null;
+    $porPagina = max(1, min(50, $porPagina));
+    $pagina = max(1, $pagina);
+    $offset = ($pagina - 1) * $porPagina;
 
     $sql = "SELECT
                 c.ClvCita,
@@ -1634,27 +1652,78 @@ public function listarCitasConPsicologo(
                 c.DuracionAplicadaMin,
                 c.EstadoCita,
                 s.NombreServicio
-
             FROM cita c
-
             INNER JOIN servicios s
                 ON s.ClvServ = c.ClvServ
-
             WHERE c.ClvPac = :clvPac
-              AND c.ClvPsi = :clvPsi
+              AND c.ClvPsi = :clvPsi";
 
-            ORDER BY
+    if ($filtrarEstado !== null) {
+        $sql .= " AND c.EstadoCita = :estado";
+    }
+
+    $sql .= " ORDER BY
                 c.FechaCita DESC,
-                c.HraInicioCita DESC";
+                c.HraInicioCita DESC
+              LIMIT :limite OFFSET :offset";
 
     $stmt = $this->db->prepare($sql);
+    $stmt->bindValue(':clvPac', $clvPac);
+    $stmt->bindValue(':clvPsi', $clvPsi);
 
+    if ($filtrarEstado !== null) {
+        $stmt->bindValue(':estado', $filtrarEstado);
+    }
+
+    $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+}
+
+/**
+ * @return array{TODAS: int, PROGRAMADA: int, ASISTIDA: int, CANCELADA: int, INASISTENCIA: int}
+ */
+public function contarCitasConPsicologoPorEstado(
+    string $clvPac,
+    string $clvPsi
+): array {
+    $base = [
+        'TODAS' => 0,
+        'PROGRAMADA' => 0,
+        'ASISTIDA' => 0,
+        'CANCELADA' => 0,
+        'INASISTENCIA' => 0
+    ];
+
+    if (!$this->perteneceAPsicologo($clvPac, $clvPsi)) {
+        return $base;
+    }
+
+    $sql = "SELECT EstadoCita, COUNT(*) AS total
+            FROM cita
+            WHERE ClvPac = :clvPac
+              AND ClvPsi = :clvPsi
+            GROUP BY EstadoCita";
+
+    $stmt = $this->db->prepare($sql);
     $stmt->execute([
         'clvPac' => $clvPac,
         'clvPsi' => $clvPsi
     ]);
 
-    return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $fila) {
+        $estado = strtoupper(trim((string) ($fila['EstadoCita'] ?? '')));
+        $total = (int) ($fila['total'] ?? 0);
+
+        if (isset($base[$estado])) {
+            $base[$estado] = $total;
+            $base['TODAS'] += $total;
+        }
+    }
+
+    return $base;
 }
 
 private function enriquecerPacienteCatalogo(

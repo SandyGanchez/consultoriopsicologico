@@ -13,8 +13,10 @@ use RuntimeException;
  *
  * Limitaciones de BD (sin alterar esquema):
  * - No existe columna ClvCita ni RutaNotif.
+ * - MensajeNotif es texto limpio orientado al usuario (sin metadatos).
  * - TipoNotif ENUM real: CITA, CANCELACION, RECORDATORIO,
  *   CUENTA, PSICOLOGO, SISTEMA, OTRA.
+ * - ASISTIDA/INASISTENCIA usan TipoNotif = CITA (título/mensaje diferencian).
  *
  * Payloads por destinatario (no reutilizar un arreglo nominal):
  * - Psicólogo: paciente + servicio + fecha + hora
@@ -23,8 +25,9 @@ use RuntimeException;
  *   la consulta no une persona/paciente.
  * - Administrador: solo eventos administrativos reales.
  *
- * Las notificaciones de cita son auxiliares: se invocan después del
- * commit de la acción principal y no provocan rollback.
+ * notificarResultadoCita() es estricto (lanza excepción) para participar
+ * en la misma transacción PDO del UPDATE de asistencia.
+ * Otros eventos de cita pueden seguir usando helpers auxiliares.
  */
 class NotificacionService
 {
@@ -58,8 +61,8 @@ class NotificacionService
         string $tipo,
         ?string $clvCita = null
     ): bool {
-        unset($clvCita);
-
+        // Sin columna ClvCita en notificacion: el parámetro se ignora.
+        // Idempotencia de asistencia: transición atómica PROGRAMADA → final.
         $clvUsu = trim($clvUsu);
         $titulo = trim($titulo);
         $mensaje = trim($mensaje);
@@ -227,47 +230,83 @@ class NotificacionService
         $this->notificarCancelacionConsultorio($clvCita);
     }
 
+    /**
+     * Notificaciones de resultado dentro de la misma transacción del UPDATE.
+     * Lanza excepción ante cualquier fallo (para provocar ROLLBACK).
+     */
     public function notificarResultadoCita(
         string $clvCita,
         string $resultado
     ): void {
         $resultado = strtoupper(trim($resultado));
+        $clvCita = trim($clvCita);
 
         if (!in_array($resultado, ['ASISTIDA', 'INASISTENCIA'], true)) {
-            $this->registrarFalloAuxiliar(
-                'resultado_cita_accion_invalida',
-                $clvCita
+            throw new InvalidArgumentException(
+                'El resultado de la cita no es válido.'
             );
-            return;
         }
 
         $payloadPac = $this->obtenerPayloadParaPaciente($clvCita);
 
-        if ($payloadPac !== null) {
-            if ($resultado === 'ASISTIDA') {
-                $this->intentarCrearParaUsuario(
-                    $payloadPac['ClvUsuDestinatario'],
-                    'Asistencia registrada',
-                    "Tu sesión del {$payloadPac['Fecha']} a las "
-                    . "{$payloadPac['Hora']} fue registrada como asistida.",
-                    'CITA',
-                    $clvCita,
-                    'resultado_asistida_paciente'
-                );
-            } else {
-                $this->intentarCrearParaUsuario(
-                    $payloadPac['ClvUsuDestinatario'],
-                    'Inasistencia registrada',
-                    "Tu cita del {$payloadPac['Fecha']} a las "
-                    . "{$payloadPac['Hora']} fue registrada como inasistencia.",
-                    'CITA',
-                    $clvCita,
-                    'resultado_inasistencia_paciente'
-                );
-            }
+        if ($payloadPac === null) {
+            throw new RuntimeException(
+                'No fue posible preparar la notificación del paciente.'
+            );
         }
 
-        $this->notificarResultadoCitaConsultorio($clvCita, $resultado);
+        if ($resultado === 'ASISTIDA') {
+            $this->crearParaUsuario(
+                $payloadPac['ClvUsuDestinatario'],
+                'Asistencia registrada',
+                "Tu cita del {$payloadPac['Fecha']} a las "
+                . "{$payloadPac['Hora']} fue registrada como asistida.",
+                'CITA'
+            );
+        } else {
+            $this->crearParaUsuario(
+                $payloadPac['ClvUsuDestinatario'],
+                'Inasistencia registrada',
+                "Tu cita del {$payloadPac['Fecha']} a las "
+                . "{$payloadPac['Hora']} fue registrada como inasistencia.",
+                'CITA'
+            );
+        }
+
+        $payloadPsi = $this->obtenerPayloadParaPsicologo($clvCita);
+
+        if ($payloadPsi === null) {
+            throw new RuntimeException(
+                'No fue posible preparar la notificación del psicólogo.'
+            );
+        }
+
+        $nombrePaciente = trim(
+            (string) ($payloadPsi['NombrePaciente'] ?? '')
+        );
+        $nombrePaciente = preg_replace('/\s+/u', ' ', $nombrePaciente) ?? '';
+        $nombrePaciente = $nombrePaciente !== '' ? $nombrePaciente : 'el paciente';
+
+        if ($resultado === 'ASISTIDA') {
+            $this->crearParaUsuario(
+                $payloadPsi['ClvUsuDestinatario'],
+                'Asistencia confirmada',
+                "Registraste la cita de {$nombrePaciente} como asistida.",
+                'CITA'
+            );
+        } else {
+            $this->crearParaUsuario(
+                $payloadPsi['ClvUsuDestinatario'],
+                'Inasistencia confirmada',
+                "Registraste la cita de {$nombrePaciente} como inasistencia.",
+                'CITA'
+            );
+        }
+
+        $this->crearNotificacionesResultadoConsultorio(
+            $clvCita,
+            $resultado
+        );
     }
 
     /*
@@ -361,54 +400,72 @@ class NotificacionService
         string $resultado
     ): void {
         try {
-            $resultado = strtoupper(trim($resultado));
-
-            if (
-                !in_array(
-                    $resultado,
-                    ['ASISTIDA', 'INASISTENCIA'],
-                    true
-                )
-            ) {
-                return;
-            }
-
-            $op = $this->obtenerPayloadOperativoConsultorio($clvCita);
-
-            if ($op === null) {
-                $this->registrarFalloAuxiliar(
-                    'consultorio_resultado_sin_payload',
-                    $clvCita
-                );
-                return;
-            }
-
-            if ($resultado === 'ASISTIDA') {
-                $titulo = 'Asistencia registrada';
-                $mensaje =
-                    "{$op['NombrePsicologo']} registró como asistida la cita de "
-                    . "{$op['NombreServicio']} del {$op['Fecha']} "
-                    . "a las {$op['Hora']}.";
-            } else {
-                $titulo = 'Inasistencia registrada';
-                $mensaje =
-                    "{$op['NombrePsicologo']} registró una inasistencia en la cita de "
-                    . "{$op['NombreServicio']} del {$op['Fecha']} "
-                    . "a las {$op['Hora']}.";
-            }
-
-            $this->crearParaUsuariosConsultorio(
-                $op['ClvCons'],
-                $titulo,
-                $mensaje,
-                'CITA',
-                $clvCita
+            $this->crearNotificacionesResultadoConsultorio(
+                $clvCita,
+                $resultado
             );
         } catch (\Throwable $e) {
             $this->registrarFalloAuxiliar(
                 'consultorio_resultado',
                 $clvCita,
                 $e
+            );
+        }
+    }
+
+    /**
+     * Avisos operativos al consultorio (estrictos, sin capturar).
+     */
+    private function crearNotificacionesResultadoConsultorio(
+        string $clvCita,
+        string $resultado
+    ): void {
+        $resultado = strtoupper(trim($resultado));
+
+        if (
+            !in_array(
+                $resultado,
+                ['ASISTIDA', 'INASISTENCIA'],
+                true
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'El resultado de la cita no es válido.'
+            );
+        }
+
+        $op = $this->obtenerPayloadOperativoConsultorio($clvCita);
+
+        if ($op === null) {
+            throw new RuntimeException(
+                'No fue posible preparar el aviso del consultorio.'
+            );
+        }
+
+        if ($resultado === 'ASISTIDA') {
+            $titulo = 'Asistencia registrada';
+            $mensaje =
+                "{$op['NombrePsicologo']} registró como asistida la cita de "
+                . "{$op['NombreServicio']} del {$op['Fecha']} "
+                . "a las {$op['Hora']}.";
+        } else {
+            $titulo = 'Inasistencia registrada';
+            $mensaje =
+                "{$op['NombrePsicologo']} registró una inasistencia en la cita de "
+                . "{$op['NombreServicio']} del {$op['Fecha']} "
+                . "a las {$op['Hora']}.";
+        }
+
+        $destinatarios = $this->obtenerUsuariosConsultorioActivos(
+            (string) $op['ClvCons']
+        );
+
+        foreach ($destinatarios as $clvUsu) {
+            $this->crearParaUsuario(
+                $clvUsu,
+                $titulo,
+                $mensaje,
+                'CITA'
             );
         }
     }

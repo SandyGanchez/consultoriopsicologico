@@ -589,6 +589,7 @@ function aplicarSnapshotACalendario(datos) {
         const item = mapa.get(String(contextoDetalleCitaPsi.clvCita));
         sincronizarContextoDetalleDesdeItem(item);
         actualizarEstadoDetallePsi(contextoDetalleCitaPsi.estado);
+        actualizarNotaOperativaPsi(contextoDetalleCitaPsi.estado);
         actualizarBloquesAsistenciaPsi(contextoDetalleCitaPsi);
     }
 
@@ -1577,6 +1578,7 @@ async function mostrarDetalleCitaPsi(evento) {
     );
 
     actualizarEstadoDetallePsi(contextoDetalleCitaPsi.estado);
+    actualizarNotaOperativaPsi(contextoDetalleCitaPsi.estado);
     actualizarBloquesAsistenciaPsi(contextoDetalleCitaPsi);
 
     const modalElement =
@@ -1603,6 +1605,28 @@ function actualizarEstadoDetallePsi(estado) {
     estadoElement.className =
         'agenda-status status-' +
         String(estado || '').toLowerCase();
+}
+
+function notaOperativaPsicologoPsi(estado) {
+    switch (String(estado || '').toUpperCase()) {
+        case 'PROGRAMADA':
+            return 'La cita está programada.';
+        case 'ASISTIDA':
+            return 'Registraste la asistencia de esta cita.';
+        case 'CANCELADA':
+            return 'La cita fue cancelada.';
+        case 'INASISTENCIA':
+            return 'Registraste que el paciente no asistió.';
+        default:
+            return '—';
+    }
+}
+
+function actualizarNotaOperativaPsi(estado) {
+    colocarTextoPsi(
+        'detalleNotaOperativaPsi',
+        notaOperativaPsicologoPsi(estado)
+    );
 }
 
 function actualizarBloquesAsistenciaPsi(ctx) {
@@ -1645,8 +1669,7 @@ function actualizarBloquesAsistenciaPsi(ctx) {
         if (ctx.puedeRegistrarResultado) {
             if (mensaje) {
                 mensaje.textContent =
-                    ctx.mensajeClinico ||
-                    'La cita ya comenzó. Registra si el paciente asistió para continuar con la documentación clínica.';
+                    'Esta cita está pendiente de registrar asistencia.';
                 mensaje.classList.remove('d-none');
             }
             acciones?.classList.remove('d-none');
@@ -1660,7 +1683,6 @@ function actualizarBloquesAsistenciaPsi(ctx) {
             }
         } else if (mensaje) {
             mensaje.textContent =
-                ctx.mensajeClinico ||
                 'Podrás registrar la asistencia cuando comience la cita.';
             mensaje.classList.remove('d-none');
         }
@@ -1669,10 +1691,17 @@ function actualizarBloquesAsistenciaPsi(ctx) {
 
     if (ctx.estado === 'INASISTENCIA') {
         if (mensaje) {
-            mensaje.textContent = 'Inasistencia registrada.';
+            mensaje.textContent =
+                'Registraste que el paciente no asistió.';
             mensaje.classList.remove('d-none');
         }
         return;
+    }
+
+    if (ctx.estado === 'ASISTIDA' && mensaje && !ctx.urlClinica) {
+        mensaje.textContent =
+            'Registraste la asistencia de esta cita.';
+        mensaje.classList.remove('d-none');
     }
 
     if (ctx.estado === 'ASISTIDA' && clinica) {
@@ -1851,6 +1880,7 @@ async function enviarRegistroAsistenciaPsi(accion) {
             datos.urlCompletarDatos || '';
 
         actualizarEstadoDetallePsi(contextoDetalleCitaPsi.estado);
+        actualizarNotaOperativaPsi(contextoDetalleCitaPsi.estado);
         actualizarBloquesAsistenciaPsi(contextoDetalleCitaPsi);
 
         const modalAsistida = document.getElementById(

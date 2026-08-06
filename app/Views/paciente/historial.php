@@ -98,16 +98,32 @@ $totalHistorial = max(0, (int) ($totalHistorial ?? 0));
 
 $filtros = [
     'TODAS' => 'Todas',
+    'PROGRAMADA' => 'Programadas',
     'ASISTIDA' => 'Asistidas',
     'CANCELADA' => 'Canceladas',
     'INASISTENCIA' => 'Inasistencias'
 ];
 
-$urlFiltro = static function (string $estado, int $pagina = 1) use ($escapar): string {
+$fechaDesde = trim((string) ($fechaDesde ?? ''));
+$fechaHasta = trim((string) ($fechaHasta ?? ''));
+$conteosEstado = is_array($conteosEstado ?? null) ? $conteosEstado : [];
+
+$urlFiltro = static function (
+    string $estado,
+    int $pagina = 1
+) use ($escapar, $fechaDesde, $fechaHasta): string {
     $params = [];
 
     if ($estado !== 'TODAS') {
         $params['estado'] = $estado;
+    }
+
+    if ($fechaDesde !== '') {
+        $params['desde'] = $fechaDesde;
+    }
+
+    if ($fechaHasta !== '') {
+        $params['hasta'] = $fechaHasta;
     }
 
     if ($pagina > 1) {
@@ -136,16 +152,41 @@ $urlFiltro = static function (string $estado, int $pagina = 1) use ($escapar): s
 
     <nav class="paciente-filter-chips" aria-label="Filtrar historial por estado">
         <?php foreach ($filtros as $valor => $etiqueta): ?>
-            <?php $activo = $filtroEstado === $valor; ?>
+            <?php
+                $activo = $filtroEstado === $valor;
+                $conteo = (int) ($conteosEstado[$valor] ?? 0);
+            ?>
             <a
                 href="<?= $urlFiltro($valor, 1); ?>"
                 class="paciente-filter-chip<?= $activo ? ' is-active' : ''; ?>"
                 <?= $activo ? 'aria-current="page"' : ''; ?>
             >
                 <?= $escapar($etiqueta); ?>
+                <span aria-hidden="true">(<?= $escapar((string) $conteo); ?>)</span>
             </a>
         <?php endforeach; ?>
     </nav>
+
+    <form
+        class="paciente-history-date-filters"
+        method="GET"
+        action="<?= $escapar(Helper::baseUrl('paciente/historial')); ?>"
+    >
+        <?php if ($filtroEstado !== 'TODAS'): ?>
+            <input type="hidden" name="estado" value="<?= $escapar($filtroEstado); ?>">
+        <?php endif; ?>
+        <label>
+            Desde
+            <input type="date" name="desde" value="<?= $escapar($fechaDesde); ?>">
+        </label>
+        <label>
+            Hasta
+            <input type="date" name="hasta" value="<?= $escapar($fechaHasta); ?>">
+        </label>
+        <button type="submit" class="paciente-btn paciente-btn-secondary">
+            Aplicar fechas
+        </button>
+    </form>
 
     <?php if ($totalHistorial > 0): ?>
         <p class="paciente-history-count">
@@ -231,6 +272,12 @@ $urlFiltro = static function (string $estado, int $pagina = 1) use ($escapar): s
                                 <?= $escapar($cita['NombreCons'] ?? ''); ?>
                             </li>
                         </ul>
+
+                        <?php if (!empty($cita['notaOperativa'])): ?>
+                            <p class="paciente-appointment-note">
+                                <?= $escapar((string) $cita['notaOperativa']); ?>
+                            </p>
+                        <?php endif; ?>
 
                         <?php if ($estado === 'CANCELADA' && $motivo !== ''): ?>
                             <p class="paciente-appointment-note">

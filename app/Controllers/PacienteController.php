@@ -228,12 +228,29 @@ class PacienteController extends Controller
         $citas = $citaModel->obtenerMisCitas($clvPac);
 
         $cancelables = 0;
+        $programadas = 0;
 
         foreach ($citas as $indice => $cita) {
+            $estadoCita = strtoupper(trim((string) ($cita['EstadoCita'] ?? '')));
+            $yaInicio = \App\Services\EstadoCitaPresentacion::programadaYaInicio(
+                (string) ($cita['FechaCita'] ?? ''),
+                (string) ($cita['HraInicioCita'] ?? '')
+            );
+
+            $citas[$indice]['notaOperativa'] =
+                \App\Services\EstadoCitaPresentacion::notaPaciente(
+                    $estadoCita,
+                    $estadoCita === 'PROGRAMADA' && $yaInicio
+                );
+
             $cancelacion =
                 $citaModel->evaluarCancelacionPaciente($cita);
 
             $citas[$indice]['cancelacion'] = $cancelacion;
+
+            if ($estadoCita === 'PROGRAMADA') {
+                $programadas++;
+            }
 
             if (!empty($cancelacion['puedeCancelar'])) {
                 $cancelables++;
@@ -245,6 +262,13 @@ class PacienteController extends Controller
         $ahora = new \DateTimeImmutable('now', $zona);
 
         foreach ($citas as $cita) {
+            if (
+                strtoupper(trim((string) ($cita['EstadoCita'] ?? '')))
+                !== 'PROGRAMADA'
+            ) {
+                continue;
+            }
+
             $fecha = trim((string) ($cita['FechaCita'] ?? ''));
             $hora = trim((string) ($cita['HraInicioCita'] ?? ''));
 
@@ -275,7 +299,7 @@ class PacienteController extends Controller
                 'citas' => $citas,
                 'proximaCita' => $proximaCita,
                 'resumenCitas' => [
-                    'programadas' => count($citas),
+                    'programadas' => $programadas,
                     'cancelables' => $cancelables,
                     'noLeidas' => $notificacionModel->contarNoLeidas(
                         (string) $this->usuario['ClvUsu']
@@ -787,6 +811,7 @@ public function detalleCita(): void
         $estadoRaw = strtoupper(trim((string) ($_GET['estado'] ?? 'TODAS')));
         $estadosPermitidos = [
             'TODAS',
+            'PROGRAMADA',
             'ASISTIDA',
             'CANCELADA',
             'INASISTENCIA'
@@ -797,6 +822,8 @@ public function detalleCita(): void
         }
 
         $estadoFiltro = $estadoRaw === 'TODAS' ? null : $estadoRaw;
+        $fechaInicio = trim((string) ($_GET['desde'] ?? ''));
+        $fechaFin = trim((string) ($_GET['hasta'] ?? ''));
 
         $pagina = (int) ($_GET['pagina'] ?? 1);
         $pagina = max(1, $pagina);
@@ -807,8 +834,37 @@ public function detalleCita(): void
 
         $total = $citaModel->contarHistorial(
             $clvPac,
-            $estadoFiltro
+            $estadoFiltro,
+            $fechaInicio !== '' ? $fechaInicio : null,
+            $fechaFin !== '' ? $fechaFin : null
         );
+
+        $rangoInvalido = (
+            ($fechaInicio !== '' || $fechaFin !== '')
+            && $total === 0
+            && (
+                ($fechaInicio !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaInicio))
+                || ($fechaFin !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaFin))
+                || (
+                    preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaInicio)
+                    && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaFin)
+                    && $fechaInicio > $fechaFin
+                )
+            )
+        );
+
+        if ($rangoInvalido) {
+            Session::set(
+                'error',
+                'El rango de fechas no es válido.'
+            );
+            $fechaInicio = '';
+            $fechaFin = '';
+            $total = $citaModel->contarHistorial(
+                $clvPac,
+                $estadoFiltro
+            );
+        }
 
         $totalPaginas = max(1, (int) ceil($total / $porPagina));
 
@@ -820,8 +876,23 @@ public function detalleCita(): void
             $clvPac,
             $estadoFiltro,
             $pagina,
-            $porPagina
+            $porPagina,
+            $fechaInicio !== '' ? $fechaInicio : null,
+            $fechaFin !== '' ? $fechaFin : null
         );
+
+        foreach ($historial as $i => $cita) {
+            $estadoCita = strtoupper(trim((string) ($cita['EstadoCita'] ?? '')));
+            $yaInicio = \App\Services\EstadoCitaPresentacion::programadaYaInicio(
+                (string) ($cita['FechaCita'] ?? ''),
+                (string) ($cita['HraInicioCita'] ?? '')
+            );
+            $historial[$i]['notaOperativa'] =
+                \App\Services\EstadoCitaPresentacion::notaPaciente(
+                    $estadoCita,
+                    $estadoCita === 'PROGRAMADA' && $yaInicio
+                );
+        }
 
         $this->view(
             'paciente/historial',
@@ -830,6 +901,9 @@ public function detalleCita(): void
                 'usuario' => $this->usuario,
                 'historial' => $historial,
                 'filtroEstado' => $estadoRaw,
+                'fechaDesde' => $fechaInicio,
+                'fechaHasta' => $fechaFin,
+                'conteosEstado' => $citaModel->contarPorEstadoPaciente($clvPac),
                 'paginaActual' => $pagina,
                 'totalPaginas' => $totalPaginas,
                 'totalHistorial' => $total,

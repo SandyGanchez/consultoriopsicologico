@@ -251,10 +251,13 @@ class Cita extends Model
                 INNER JOIN consultorio co
                     ON co.ClvCons = c.ClvCons
                 WHERE c.ClvPac = :clvPac
-                  AND c.EstadoCita = 'PROGRAMADA'
+                  AND (
+                      c.EstadoCita = 'PROGRAMADA'
+                      OR c.FechaCita >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+                  )
                 ORDER BY
-                    c.FechaCita ASC,
-                    c.HraInicioCita ASC";
+                    c.FechaCita DESC,
+                    c.HraInicioCita DESC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -271,7 +274,7 @@ class Cita extends Model
     */
 
     /**
-     * Historial operativo (ASISTIDA, CANCELADA, INASISTENCIA).
+     * Historial operativo del paciente (todos los estados, con filtros).
      *
      * @return list<array<string, mixed>>
      */
@@ -279,15 +282,21 @@ class Cita extends Model
         string $clvPac,
         ?string $estado = null,
         int $pagina = 1,
-        int $porPagina = 10
+        int $porPagina = 10,
+        ?string $fechaInicio = null,
+        ?string $fechaFin = null
     ): array {
         $clvPac = trim($clvPac);
         $estado = $this->normalizarEstadoHistorial($estado);
         $porPagina = max(1, min(50, $porPagina));
         $pagina = max(1, $pagina);
         $offset = ($pagina - 1) * $porPagina;
+        $rango = $this->normalizarRangoFechasHistorial(
+            $fechaInicio,
+            $fechaFin
+        );
 
-        if ($clvPac === '') {
+        if ($clvPac === '' || $rango === null) {
             return [];
         }
 
@@ -321,11 +330,18 @@ class Cita extends Model
                     ON c.ClvServ = s.ClvServ
                 INNER JOIN consultorio co
                     ON co.ClvCons = c.ClvCons
-                WHERE c.ClvPac = :clvPac
-                  AND c.EstadoCita <> 'PROGRAMADA'";
+                WHERE c.ClvPac = :clvPac";
 
         if ($estado !== null) {
             $sql .= " AND c.EstadoCita = :estado";
+        }
+
+        if ($rango['inicio'] !== null) {
+            $sql .= " AND c.FechaCita >= :fechaInicio";
+        }
+
+        if ($rango['fin'] !== null) {
+            $sql .= " AND c.FechaCita <= :fechaFin";
         }
 
         $sql .= " ORDER BY
@@ -340,6 +356,14 @@ class Cita extends Model
             $stmt->bindValue(':estado', $estado);
         }
 
+        if ($rango['inicio'] !== null) {
+            $stmt->bindValue(':fechaInicio', $rango['inicio']);
+        }
+
+        if ($rango['fin'] !== null) {
+            $stmt->bindValue(':fechaFin', $rango['fin']);
+        }
+
         $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -349,22 +373,35 @@ class Cita extends Model
 
     public function contarHistorial(
         string $clvPac,
-        ?string $estado = null
+        ?string $estado = null,
+        ?string $fechaInicio = null,
+        ?string $fechaFin = null
     ): int {
         $clvPac = trim($clvPac);
         $estado = $this->normalizarEstadoHistorial($estado);
+        $rango = $this->normalizarRangoFechasHistorial(
+            $fechaInicio,
+            $fechaFin
+        );
 
-        if ($clvPac === '') {
+        if ($clvPac === '' || $rango === null) {
             return 0;
         }
 
         $sql = "SELECT COUNT(*)
                 FROM cita
-                WHERE ClvPac = :clvPac
-                  AND EstadoCita <> 'PROGRAMADA'";
+                WHERE ClvPac = :clvPac";
 
         if ($estado !== null) {
             $sql .= " AND EstadoCita = :estado";
+        }
+
+        if ($rango['inicio'] !== null) {
+            $sql .= " AND FechaCita >= :fechaInicio";
+        }
+
+        if ($rango['fin'] !== null) {
+            $sql .= " AND FechaCita <= :fechaFin";
         }
 
         $stmt = $this->db->prepare($sql);
@@ -374,9 +411,59 @@ class Cita extends Model
             $params['estado'] = $estado;
         }
 
+        if ($rango['inicio'] !== null) {
+            $params['fechaInicio'] = $rango['inicio'];
+        }
+
+        if ($rango['fin'] !== null) {
+            $params['fechaFin'] = $rango['fin'];
+        }
+
         $stmt->execute($params);
 
         return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Conteos por estado del paciente autenticado.
+     *
+     * @return array{TODAS: int, PROGRAMADA: int, ASISTIDA: int, CANCELADA: int, INASISTENCIA: int}
+     */
+    public function contarPorEstadoPaciente(string $clvPac): array
+    {
+        $base = [
+            'TODAS' => 0,
+            'PROGRAMADA' => 0,
+            'ASISTIDA' => 0,
+            'CANCELADA' => 0,
+            'INASISTENCIA' => 0
+        ];
+
+        $clvPac = trim($clvPac);
+
+        if ($clvPac === '') {
+            return $base;
+        }
+
+        $sql = "SELECT EstadoCita, COUNT(*) AS total
+                FROM cita
+                WHERE ClvPac = :clvPac
+                GROUP BY EstadoCita";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['clvPac' => $clvPac]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $fila) {
+            $estado = strtoupper(trim((string) ($fila['EstadoCita'] ?? '')));
+            $total = (int) ($fila['total'] ?? 0);
+
+            if (isset($base[$estado])) {
+                $base[$estado] = $total;
+                $base['TODAS'] += $total;
+            }
+        }
+
+        return $base;
     }
 
     private function normalizarEstadoHistorial(?string $estado): ?string
@@ -384,6 +471,7 @@ class Cita extends Model
         $estado = strtoupper(trim((string) $estado));
 
         $permitidos = [
+            'PROGRAMADA',
             'ASISTIDA',
             'CANCELADA',
             'INASISTENCIA'
@@ -396,6 +484,75 @@ class Cita extends Model
         return in_array($estado, $permitidos, true)
             ? $estado
             : null;
+    }
+
+    /**
+     * @return array{inicio: ?string, fin: ?string}|null null = rango inválido
+     */
+    private function normalizarRangoFechasHistorial(
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): ?array {
+        $inicio = trim((string) $fechaInicio);
+        $fin = trim((string) $fechaFin);
+
+        if ($inicio === '' && $fin === '') {
+            return ['inicio' => null, 'fin' => null];
+        }
+
+        $validar = static function (string $fecha): ?string {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+                return null;
+            }
+
+            $dt = \DateTimeImmutable::createFromFormat('!Y-m-d', $fecha);
+
+            if (
+                !$dt instanceof \DateTimeImmutable
+                || $dt->format('Y-m-d') !== $fecha
+            ) {
+                return null;
+            }
+
+            return $fecha;
+        };
+
+        $inicioNorm = $inicio !== '' ? $validar($inicio) : null;
+        $finNorm = $fin !== '' ? $validar($fin) : null;
+
+        if ($inicio !== '' && $inicioNorm === null) {
+            return null;
+        }
+
+        if ($fin !== '' && $finNorm === null) {
+            return null;
+        }
+
+        if (
+            $inicioNorm !== null
+            && $finNorm !== null
+            && $inicioNorm > $finNorm
+        ) {
+            return null;
+        }
+
+        if (
+            $inicioNorm !== null
+            && $finNorm !== null
+        ) {
+            $iniDt = new \DateTimeImmutable($inicioNorm);
+            $finDt = new \DateTimeImmutable($finNorm);
+            $dias = (int) $iniDt->diff($finDt)->days;
+
+            if ($dias > 366) {
+                return null;
+            }
+        }
+
+        return [
+            'inicio' => $inicioNorm,
+            'fin' => $finNorm
+        ];
     }
 
     /*
@@ -2144,7 +2301,8 @@ public function obtenerDetallePaciente(
         string $clvCita,
         string $clvPsi,
         string $clvCons,
-        string $nuevoEstado
+        string $nuevoEstado,
+        ?\App\Services\NotificacionService $notificacionService = null
     ): array {
         $clvCita = trim($clvCita);
         $clvPsi = trim($clvPsi);
@@ -2233,11 +2391,19 @@ public function obtenerDetallePaciente(
             if ($estadoActual !== 'PROGRAMADA') {
                 $this->db->rollBack();
 
+                $mensajeYaRegistrada = in_array(
+                    $estadoActual,
+                    ['ASISTIDA', 'INASISTENCIA'],
+                    true
+                )
+                    ? 'La asistencia de esta cita ya fue registrada.'
+                    : 'Esta cita ya no puede cambiar de estado.';
+
                 return [
                     'ok' => false,
                     'codigo' => 'TRANSICION_NO_PERMITIDA',
-                    'mensaje' =>
-                        'Esta cita ya no puede cambiar de estado.'
+                    'mensaje' => $mensajeYaRegistrada,
+                    'estado' => $estadoActual
                 ];
             }
 
@@ -2274,7 +2440,7 @@ public function obtenerDetallePaciente(
                     'ok' => false,
                     'codigo' => 'CITA_NO_INICIADA',
                     'mensaje' =>
-                        'La asistencia podrá registrarse cuando comience la cita.'
+                        'Podrás registrar la asistencia cuando comience la cita.'
                 ];
             }
 
@@ -2304,10 +2470,22 @@ public function obtenerDetallePaciente(
                 ];
             }
 
+            /*
+             * Misma conexión PDO (Database::connect singleton):
+             * UPDATE + INSERT notificaciones en una sola transacción.
+             * Si falla cualquier notificación → ROLLBACK y la cita sigue PROGRAMADA.
+             */
+            $servicioNotif = $notificacionService
+                ?? new \App\Services\NotificacionService();
+            $servicioNotif->notificarResultadoCita(
+                $clvCita,
+                $nuevoEstado
+            );
+
             $this->db->commit();
 
             $mensaje = $nuevoEstado === 'ASISTIDA'
-                ? 'La cita fue marcada como asistida.'
+                ? 'La asistencia fue registrada.'
                 : 'La inasistencia fue registrada.';
 
             return [
@@ -2315,12 +2493,18 @@ public function obtenerDetallePaciente(
                 'estado' => $nuevoEstado,
                 'mensaje' => $mensaje,
                 'clvPac' => (string) ($cita['ClvPac'] ?? ''),
-                'clvCita' => $clvCita
+                'clvCita' => $clvCita,
+                'FechaCita' => (string) ($cita['FechaCita'] ?? ''),
+                'HraInicioCita' => (string) ($cita['HraInicioCita'] ?? '')
             ];
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
+
+            error_log(
+                'Cita::registrarResultadoPorPsicologo: fallo controlado.'
+            );
 
             return [
                 'ok' => false,

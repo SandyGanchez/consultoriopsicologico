@@ -1066,10 +1066,46 @@ public function verPaciente(string $clvPac): void
         Response::redirect('psicologo/pacientes');
     }
 
+    $estadoRaw = strtoupper(trim((string) ($_GET['estado'] ?? 'TODAS')));
+    $estadosPermitidos = [
+        'TODAS',
+        'PROGRAMADA',
+        'ASISTIDA',
+        'CANCELADA',
+        'INASISTENCIA'
+    ];
+
+    if (!in_array($estadoRaw, $estadosPermitidos, true)) {
+        $estadoRaw = 'TODAS';
+    }
+
+    $pagina = max(1, (int) ($_GET['pagina'] ?? 1));
+    $porPagina = 10;
+    $conteosEstado = $pacienteModel->contarCitasConPsicologoPorEstado(
+        $clvPac,
+        (string) $clvPsi
+    );
+    $totalCitas = (int) ($conteosEstado[$estadoRaw] ?? $conteosEstado['TODAS']);
+    $totalPaginas = max(1, (int) ceil($totalCitas / $porPagina));
+
+    if ($pagina > $totalPaginas) {
+        $pagina = $totalPaginas;
+    }
+
     $citas = $pacienteModel->listarCitasConPsicologo(
         $clvPac,
-        $clvPsi
+        (string) $clvPsi,
+        $estadoRaw === 'TODAS' ? null : $estadoRaw,
+        $pagina,
+        $porPagina
     );
+
+    foreach ($citas as $i => $cita) {
+        $citas[$i]['notaOperativa'] =
+            \App\Services\EstadoCitaPresentacion::notaPsicologo(
+                (string) ($cita['EstadoCita'] ?? '')
+            );
+    }
 
     $clvCons = (string) ($contexto['psicologo']['ClvCons'] ?? '');
     $pendientePaciente = (new PendienteClinicoService())->evaluarPaciente(
@@ -1087,6 +1123,11 @@ public function verPaciente(string $clvPac): void
             'consultorio' => $contexto['consultorio'],
             'paciente' => $paciente,
             'citas' => $citas,
+            'filtroEstadoCitas' => $estadoRaw,
+            'conteosEstadoCitas' => $conteosEstado,
+            'paginaCitas' => $pagina,
+            'totalPaginasCitas' => $totalPaginas,
+            'totalCitasFiltradas' => $totalCitas,
             'historiaPendiente' => !empty($pendientePaciente['historiaPendiente']),
             'seguimientoPendiente' => !empty($pendientePaciente['seguimientoPendiente']),
             'citasRegistrarAsistencia' =>
@@ -1309,6 +1350,17 @@ public function agenda(): void
         }
     }
 
+    $pendienteAgenda = (new PendienteClinicoService())->listarPendientesOperativos(
+        (string) $clvPsi,
+        (string) ($contexto['psicologo']['ClvCons'] ?? '')
+    );
+
+    $citasPendientesAsistencia = is_array(
+        $pendienteAgenda['registrarAsistencia'] ?? null
+    )
+        ? $pendienteAgenda['registrarAsistencia']
+        : [];
+
     $this->view(
         'psicologo/agenda',
         [
@@ -1320,6 +1372,7 @@ public function agenda(): void
             'servicios' => $servicios,
             'pacientePreseleccionado' => $pacientePreseleccionado,
             'errorPacienteAgenda' => $errorPacienteAgenda,
+            'citasPendientesAsistencia' => $citasPendientesAsistencia,
             'cargarAgendaPsicologo' => true
         ],
         'psicologo'
@@ -1566,22 +1619,21 @@ public function registrarAsistenciaCita(): void
             default => 400
         };
 
-        $this->responderJsonAgenda($resultado, $codigoHttp);
+        $this->responderJsonAgenda([
+            'ok' => false,
+            'codigo' => (string) ($resultado['codigo'] ?? 'ERROR'),
+            'mensaje' => (string) (
+                $resultado['mensaje']
+                ?? 'No fue posible actualizar la cita.'
+            ),
+            'estado' => $resultado['estado'] ?? null
+        ], $codigoHttp);
     }
 
     /*
-     * Resultado ya confirmado (commit en el modelo).
-     * Si falla la notificación, el estado de la cita no se revierte.
+     * UPDATE + notificaciones ya confirmados en una sola transacción
+     * dentro de Cita::registrarResultadoPorPsicologo.
      */
-    try {
-        (new NotificacionService())->notificarResultadoCita(
-            $clvCita,
-            (string) ($resultado['estado'] ?? $accion)
-        );
-    } catch (\Throwable $e) {
-        // Acción principal ya confirmada.
-    }
-
     $pendienteService = new PendienteClinicoService();
     $accionClinica = $pendienteService->resolverAccionClinicaAgenda(
         (string) ($resultado['clvPac'] ?? ''),

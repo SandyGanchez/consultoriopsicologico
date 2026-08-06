@@ -267,7 +267,7 @@ unset($_SESSION['success'], $_SESSION['error']);
             aria-labelledby="listado-citas-programadas"
         >
             <div class="paciente-section-head">
-                <h2 id="listado-citas-programadas">Citas programadas</h2>
+                <h2 id="listado-citas-programadas">Mis citas recientes</h2>
                 <a href="<?= $escapar(Helper::baseUrl('paciente/historial')); ?>">
                     Ver historial
                 </a>
@@ -317,9 +317,29 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 <h3>
                                     <?= $escapar($cita['NombreServicio'] ?? ''); ?>
                                 </h3>
-                                <span class="paciente-status is-programada">
-                                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
-                                    Programada
+                                <?php
+                                    $claseEstadoCita = match ($estado) {
+                                        'ASISTIDA' => 'is-asistida',
+                                        'CANCELADA' => 'is-cancelada',
+                                        'INASISTENCIA' => 'is-inasistencia',
+                                        default => 'is-programada'
+                                    };
+                                    $iconoEstadoCita = match ($estado) {
+                                        'ASISTIDA' => 'bi-check-circle',
+                                        'CANCELADA' => 'bi-x-circle',
+                                        'INASISTENCIA' => 'bi-person-x',
+                                        default => 'bi-calendar-check'
+                                    };
+                                    $etiquetaEstadoCita = match ($estado) {
+                                        'ASISTIDA' => 'Asistida',
+                                        'CANCELADA' => 'Cancelada',
+                                        'INASISTENCIA' => 'Inasistencia',
+                                        default => 'Programada'
+                                    };
+                                ?>
+                                <span class="paciente-status <?= $escapar($claseEstadoCita); ?>">
+                                    <i class="bi <?= $escapar($iconoEstadoCita); ?>" aria-hidden="true"></i>
+                                    <?= $escapar($etiquetaEstadoCita); ?>
                                 </span>
                             </div>
 
@@ -359,7 +379,13 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 );
                             ?>
 
-                            <?php if ($pasada): ?>
+                            <?php if (!empty($cita['notaOperativa'])): ?>
+                                <p class="paciente-appointment-note">
+                                    <?= $escapar((string) $cita['notaOperativa']); ?>
+                                </p>
+                            <?php endif; ?>
+
+                            <?php if ($pasada && $estado === 'PROGRAMADA' && empty($cita['notaOperativa'])): ?>
                                 <p class="paciente-appointment-note">
                                     Esta cita aún no tiene un resultado de
                                     asistencia registrado.
