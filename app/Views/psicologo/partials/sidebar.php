@@ -28,11 +28,28 @@ $activoAgenda = (
     $activoContiene($rutaActual, 'psicologo/agenda') !== ''
     || $activoContiene($rutaActual, 'psicologo/calendario') !== ''
 ) ? ' active' : '';
+$activoExpedienteIndividual = (
+    (bool) preg_match(
+        '#/psicologo/pacientes/ver/[^/]+/expediente(?:/|$)#',
+        $rutaActual
+    )
+    || (bool) preg_match(
+        '#/psicologo/expediente(?:/|$)#',
+        $rutaActual
+    )
+);
+$activoExpedientesCatalogo = str_contains(
+    $rutaActual,
+    '/psicologo/expedientes'
+);
+$activoExpediente = (
+    $activoExpedientesCatalogo || $activoExpedienteIndividual
+) ? ' active' : '';
 $activoPacientes = (
     $activoContiene($rutaActual, 'psicologo/pacientes') !== ''
-    && $activoContiene($rutaActual, 'psicologo/expediente') === ''
+    && !$activoExpedienteIndividual
+    && !$activoExpedientesCatalogo
 ) ? ' active' : '';
-$activoExpediente = $activoContiene($rutaActual, 'psicologo/expediente');
 $activoPerfil = $activoContiene($rutaActual, 'psicologo/perfil');
 $activoServicios = $activoContiene($rutaActual, 'psicologo/servicios');
 $activoDisponibilidad = $activoContiene($rutaActual, 'psicologo/disponibilidad');
@@ -130,7 +147,7 @@ $activoConfiguracion = $activoContiene($rutaActual, 'psicologo/configuracion');
         <p class="psicologo-menu-group">Gestión clínica</p>
 
         <a
-            href="<?= Helper::baseUrl('psicologo/expediente'); ?>"
+            href="<?= Helper::baseUrl('psicologo/expedientes'); ?>"
             class="psicologo-menu-link<?= $activoExpediente; ?>"
             <?= $activoExpediente !== '' ? 'aria-current="page"' : ''; ?>
         >

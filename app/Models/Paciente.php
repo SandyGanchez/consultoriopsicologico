@@ -1359,6 +1359,713 @@ public function contarPorPsicologo(
     );
 }
 
+/**
+ * Catálogo de expedientes (Fase 3B).
+ * Relación autorizada: EXISTS cita con el psicólogo (sin duplicar pacientes).
+ * Última sesión: última cita ASISTIDA ya iniciada/pasada.
+ * Actividad reciente (filtro y orden): CASE entre
+ *   última ASISTIDA y último seguimiento autorizado
+ *   (NULL-safe; sin fechas ficticias) en los últimos 90 días.
+ *
+ * @param array{
+ *   q?: string,
+ *   actividad?: string,
+ *   cita?: string,
+ *   pendiente?: string,
+ *   orden?: string,
+ *   pagina?: int,
+ *   porPagina?: int
+ * } $opciones
+ * @return array{
+ *   items: list<array<string, mixed>>,
+ *   total: int,
+ *   pagina: int,
+ *   porPagina: int,
+ *   totalPaginas: int,
+ *   desde: int,
+ *   hasta: int
+ * }
+ */
+public function listarCatalogoExpedientes(
+    string $clvPsi,
+    array $opciones = []
+): array {
+    $clvPsi = trim($clvPsi);
+    $porPagina = max(1, min(48, (int) ($opciones['porPagina'] ?? 12)));
+    $pagina = max(1, (int) ($opciones['pagina'] ?? 1));
+
+    if ($clvPsi === '') {
+        return [
+            'items' => [],
+            'total' => 0,
+            'pagina' => 1,
+            'porPagina' => $porPagina,
+            'totalPaginas' => 1,
+            'desde' => 0,
+            'hasta' => 0
+        ];
+    }
+
+    $filtros = $this->normalizarFiltrosCatalogoExpedientes($opciones);
+    $base = $this->sqlBaseCatalogoExpedientes($clvPsi, $filtros);
+
+    $sqlCount = 'SELECT COUNT(*) FROM (' . $base['sql'] . ') AS catalogo_exp';
+    $stmtCount = $this->db->prepare($sqlCount);
+    $stmtCount->execute($base['params']);
+    $total = (int) $stmtCount->fetchColumn();
+
+    $totalPaginas = max(1, (int) ceil($total / $porPagina));
+    if ($pagina > $totalPaginas) {
+        $pagina = $totalPaginas;
+    }
+
+    $offset = ($pagina - 1) * $porPagina;
+    $ordenSql = $this->ordenCatalogoExpedientesSql($filtros['orden']);
+
+    $sqlList = $base['sql'] . '
+            ORDER BY ' . $ordenSql . '
+            LIMIT ' . (int) $porPagina . ' OFFSET ' . (int) $offset;
+
+    $stmt = $this->db->prepare($sqlList);
+    $stmt->execute($base['params']);
+    $filas = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+    $items = array_map(
+        [$this, 'enriquecerCatalogoExpediente'],
+        $filas
+    );
+
+    $desde = $total > 0 ? $offset + 1 : 0;
+    $hasta = $total > 0 ? min($offset + count($items), $total) : 0;
+
+    return [
+        'items' => $items,
+        'total' => $total,
+        'pagina' => $pagina,
+        'porPagina' => $porPagina,
+        'totalPaginas' => $totalPaginas,
+        'desde' => $desde,
+        'hasta' => $hasta
+    ];
+}
+
+/**
+ * Conteos operativos del catálogo (propiedad del psicólogo, sin filtros de búsqueda).
+ *
+ * @return array{
+ *   total: int,
+ *   conCitaProxima: int,
+ *   conPendiente: int,
+ *   actividadReciente: int
+ * }
+ */
+public function resumenCatalogoExpedientes(string $clvPsi): array
+{
+    $clvPsi = trim($clvPsi);
+
+    $vacio = [
+        'total' => 0,
+        'conCitaProxima' => 0,
+        'conPendiente' => 0,
+        'actividadReciente' => 0
+    ];
+
+    if ($clvPsi === '') {
+        return $vacio;
+    }
+
+    $sql = "SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(tiene_proxima), 0) AS conCitaProxima,
+                COALESCE(SUM(tiene_pendiente), 0) AS conPendiente,
+                COALESCE(SUM(tiene_actividad), 0) AS actividadReciente
+            FROM (
+                SELECT
+                    p.ClvPac,
+                    CASE WHEN EXISTS (
+                        SELECT 1
+                        FROM cita cx
+                        WHERE cx.ClvPac = p.ClvPac
+                          AND cx.ClvPsi = :clvPsiProx
+                          AND cx.EstadoCita = 'PROGRAMADA'
+                          AND (
+                                cx.FechaCita > CURDATE()
+                                OR (
+                                    cx.FechaCita = CURDATE()
+                                    AND cx.HraInicioCita >= CURTIME()
+                                )
+                          )
+                    ) THEN 1 ELSE 0 END AS tiene_proxima,
+                    CASE WHEN (
+                        (
+                            SELECT COUNT(*)
+                            FROM cita cA
+                            WHERE cA.ClvPac = p.ClvPac
+                              AND cA.ClvPsi = :clvPsiAsist
+                              AND cA.EstadoCita = 'ASISTIDA'
+                        ) > 0
+                        AND (
+                            SELECT COUNT(*)
+                            FROM historial_clinico h
+                            WHERE h.ClvPac = p.ClvPac
+                              AND h.ClvPsi = :clvPsiHist
+                        ) = 0
+                    ) OR EXISTS (
+                        SELECT 1
+                        FROM cita cSeg
+                        INNER JOIN historial_clinico hSeg
+                            ON hSeg.ClvPac = cSeg.ClvPac
+                           AND hSeg.ClvCons = cSeg.ClvCons
+                           AND hSeg.ClvPsi = cSeg.ClvPsi
+                        WHERE cSeg.ClvPac = p.ClvPac
+                          AND cSeg.ClvPsi = :clvPsiSeg
+                          AND cSeg.EstadoCita = 'ASISTIDA'
+                          AND NOT EXISTS (
+                                SELECT 1
+                                FROM seguimiento_sesion ss
+                                WHERE (ss.ClvCita COLLATE utf8mb4_unicode_ci) = cSeg.ClvCita
+                          )
+                    ) THEN 1 ELSE 0 END AS tiene_pendiente,
+                    CASE WHEN EXISTS (
+                        SELECT 1
+                        FROM cita cAct
+                        WHERE cAct.ClvPac = p.ClvPac
+                          AND cAct.ClvPsi = :clvPsiActC
+                          AND cAct.EstadoCita = 'ASISTIDA'
+                          AND cAct.FechaCita >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+                    ) OR EXISTS (
+                        SELECT 1
+                        FROM seguimiento_sesion ssAct
+                        INNER JOIN historial_clinico hAct
+                            ON (hAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                             = (ssAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                        WHERE (hAct.ClvPac COLLATE utf8mb4_unicode_ci)
+                            = (p.ClvPac COLLATE utf8mb4_unicode_ci)
+                          AND (ssAct.ClvPsi COLLATE utf8mb4_unicode_ci)
+                            = (:clvPsiActS COLLATE utf8mb4_unicode_ci)
+                          AND DATE(ssAct.FechaRegistroSeg) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+                    ) THEN 1 ELSE 0 END AS tiene_actividad
+                FROM paciente p
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM cita c
+                    WHERE c.ClvPac = p.ClvPac
+                      AND c.ClvPsi = :clvPsi
+                )
+            ) AS resumen";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([
+        'clvPsi' => $clvPsi,
+        'clvPsiProx' => $clvPsi,
+        'clvPsiAsist' => $clvPsi,
+        'clvPsiHist' => $clvPsi,
+        'clvPsiSeg' => $clvPsi,
+        'clvPsiActC' => $clvPsi,
+        'clvPsiActS' => $clvPsi
+    ]);
+
+    $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+    return [
+        'total' => (int) ($row['total'] ?? 0),
+        'conCitaProxima' => (int) ($row['conCitaProxima'] ?? 0),
+        'conPendiente' => (int) ($row['conPendiente'] ?? 0),
+        'actividadReciente' => (int) ($row['actividadReciente'] ?? 0)
+    ];
+}
+
+/**
+ * @param array<string, mixed> $opciones
+ * @return array{q: string, actividad: string, cita: string, pendiente: string, orden: string}
+ */
+private function normalizarFiltrosCatalogoExpedientes(array $opciones): array
+{
+    $q = trim((string) ($opciones['q'] ?? ''));
+    if (mb_strlen($q, 'UTF-8') > 80) {
+        $q = mb_substr($q, 0, 80, 'UTF-8');
+    }
+
+    $actividad = strtoupper(trim((string) ($opciones['actividad'] ?? 'TODOS')));
+    $cita = strtoupper(trim((string) ($opciones['cita'] ?? 'TODOS')));
+    $pendiente = strtoupper(trim((string) ($opciones['pendiente'] ?? 'TODOS')));
+    $orden = strtoupper(trim((string) ($opciones['orden'] ?? 'NOMBRE_ASC')));
+
+    $actividades = ['TODOS', 'ACTIVIDAD_RECIENTE', 'SIN_ACTIVIDAD_RECIENTE'];
+    $citas = ['TODOS', 'CON_CITA_PROXIMA', 'SIN_CITA_PROXIMA'];
+    $pendientes = ['TODOS', 'CON_PENDIENTE', 'SIN_PENDIENTE'];
+    $ordenes = [
+        'NOMBRE_ASC',
+        'NOMBRE_DESC',
+        'ACTIVIDAD_RECIENTE',
+        'ACTIVIDAD_ANTIGUA'
+    ];
+
+    if (!in_array($actividad, $actividades, true)) {
+        $actividad = 'TODOS';
+    }
+    if (!in_array($cita, $citas, true)) {
+        $cita = 'TODOS';
+    }
+    if (!in_array($pendiente, $pendientes, true)) {
+        $pendiente = 'TODOS';
+    }
+    if (!in_array($orden, $ordenes, true)) {
+        $orden = 'NOMBRE_ASC';
+    }
+
+    return [
+        'q' => $q,
+        'actividad' => $actividad,
+        'cita' => $cita,
+        'pendiente' => $pendiente,
+        'orden' => $orden
+    ];
+}
+
+/**
+ * @param array{q: string, actividad: string, cita: string, pendiente: string, orden: string} $filtros
+ * @return array{sql: string, params: array<string, mixed>}
+ */
+private function sqlBaseCatalogoExpedientes(
+    string $clvPsi,
+    array $filtros
+): array {
+    $sql = "SELECT
+                p.ClvPac,
+                p.FotoPerfilPac,
+                per.FotoPerfilPer,
+                per.NombrePer,
+                per.ApPatPer,
+                per.ApMatPer,
+                CONCAT(
+                    TRIM(per.NombrePer),
+                    ' ',
+                    TRIM(per.ApPatPer),
+                    ' ',
+                    TRIM(COALESCE(per.ApMatPer, ''))
+                ) AS NombrePaciente,
+                (
+                    SELECT COUNT(*)
+                    FROM cita cSes
+                    WHERE cSes.ClvPac = p.ClvPac
+                      AND cSes.ClvPsi = :clvPsiSesiones
+                      AND cSes.EstadoCita = 'ASISTIDA'
+                ) AS TotalAsistidas,
+                (
+                    SELECT COUNT(*)
+                    FROM historial_clinico h
+                    WHERE h.ClvPac = p.ClvPac
+                      AND h.ClvPsi = :clvPsiHist
+                ) AS TotalHistorias,
+                (
+                    SELECT COUNT(*)
+                    FROM cita cSeg
+                    INNER JOIN historial_clinico hSeg
+                        ON hSeg.ClvPac = cSeg.ClvPac
+                       AND hSeg.ClvCons = cSeg.ClvCons
+                       AND hSeg.ClvPsi = cSeg.ClvPsi
+                    WHERE cSeg.ClvPac = p.ClvPac
+                      AND cSeg.ClvPsi = :clvPsiSegPend
+                      AND cSeg.EstadoCita = 'ASISTIDA'
+                      AND NOT EXISTS (
+                            SELECT 1
+                            FROM seguimiento_sesion ss
+                            WHERE (ss.ClvCita COLLATE utf8mb4_unicode_ci) = cSeg.ClvCita
+                      )
+                ) AS TotalSeguimientosPendientes,
+                (
+                    SELECT c2.FechaCita
+                    FROM cita c2
+                    WHERE c2.ClvPac = p.ClvPac
+                      AND c2.ClvPsi = :clvPsiProx
+                      AND c2.EstadoCita = 'PROGRAMADA'
+                      AND (
+                            c2.FechaCita > CURDATE()
+                            OR (
+                                c2.FechaCita = CURDATE()
+                                AND c2.HraInicioCita >= CURTIME()
+                            )
+                      )
+                    ORDER BY c2.FechaCita ASC, c2.HraInicioCita ASC
+                    LIMIT 1
+                ) AS ProximaFecha,
+                (
+                    SELECT c2.HraInicioCita
+                    FROM cita c2
+                    WHERE c2.ClvPac = p.ClvPac
+                      AND c2.ClvPsi = :clvPsiProxH
+                      AND c2.EstadoCita = 'PROGRAMADA'
+                      AND (
+                            c2.FechaCita > CURDATE()
+                            OR (
+                                c2.FechaCita = CURDATE()
+                                AND c2.HraInicioCita >= CURTIME()
+                            )
+                      )
+                    ORDER BY c2.FechaCita ASC, c2.HraInicioCita ASC
+                    LIMIT 1
+                ) AS ProximaHora,
+                (
+                    SELECT c3.FechaCita
+                    FROM cita c3
+                    WHERE c3.ClvPac = p.ClvPac
+                      AND c3.ClvPsi = :clvPsiUlt
+                      AND c3.EstadoCita = 'ASISTIDA'
+                      AND (
+                            c3.FechaCita < CURDATE()
+                            OR (
+                                c3.FechaCita = CURDATE()
+                                AND c3.HraInicioCita <= CURTIME()
+                            )
+                      )
+                    ORDER BY c3.FechaCita DESC, c3.HraInicioCita DESC
+                    LIMIT 1
+                ) AS UltimaFecha,
+                (
+                    SELECT c3.HraInicioCita
+                    FROM cita c3
+                    WHERE c3.ClvPac = p.ClvPac
+                      AND c3.ClvPsi = :clvPsiUltH
+                      AND c3.EstadoCita = 'ASISTIDA'
+                      AND (
+                            c3.FechaCita < CURDATE()
+                            OR (
+                                c3.FechaCita = CURDATE()
+                                AND c3.HraInicioCita <= CURTIME()
+                            )
+                      )
+                    ORDER BY c3.FechaCita DESC, c3.HraInicioCita DESC
+                    LIMIT 1
+                ) AS UltimaHora,
+                (
+                    SELECT
+                        CASE
+                            WHEN act.UltimaAsistida IS NULL
+                                THEN act.UltimoSeguimiento
+                            WHEN act.UltimoSeguimiento IS NULL
+                                THEN act.UltimaAsistida
+                            ELSE GREATEST(
+                                act.UltimaAsistida,
+                                act.UltimoSeguimiento
+                            )
+                        END
+                    FROM (
+                        SELECT
+                            (
+                                SELECT MAX(cAct.FechaCita)
+                                FROM cita cAct
+                                WHERE cAct.ClvPac = p.ClvPac
+                                  AND cAct.ClvPsi = :clvPsiActMaxC
+                                  AND cAct.EstadoCita = 'ASISTIDA'
+                            ) AS UltimaAsistida,
+                            (
+                                SELECT DATE(MAX(ssAct.FechaRegistroSeg))
+                                FROM seguimiento_sesion ssAct
+                                INNER JOIN historial_clinico hAct
+                                    ON (hAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                                     = (ssAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                                WHERE (hAct.ClvPac COLLATE utf8mb4_unicode_ci)
+                                    = (p.ClvPac COLLATE utf8mb4_unicode_ci)
+                                  AND (ssAct.ClvPsi COLLATE utf8mb4_unicode_ci)
+                                    = (:clvPsiActMaxS COLLATE utf8mb4_unicode_ci)
+                            ) AS UltimoSeguimiento
+                    ) AS act
+                ) AS UltimaActividadFecha
+            FROM paciente p
+            INNER JOIN usuario u
+                ON p.ClvUsu = u.ClvUsu
+            INNER JOIN persona per
+                ON u.ClvPer = per.ClvPer
+            WHERE EXISTS (
+                SELECT 1
+                FROM cita cAuth
+                WHERE cAuth.ClvPac = p.ClvPac
+                  AND cAuth.ClvPsi = :clvPsi
+            )";
+
+    $params = [
+        'clvPsi' => $clvPsi,
+        'clvPsiSesiones' => $clvPsi,
+        'clvPsiHist' => $clvPsi,
+        'clvPsiSegPend' => $clvPsi,
+        'clvPsiProx' => $clvPsi,
+        'clvPsiProxH' => $clvPsi,
+        'clvPsiUlt' => $clvPsi,
+        'clvPsiUltH' => $clvPsi,
+        'clvPsiActMaxC' => $clvPsi,
+        'clvPsiActMaxS' => $clvPsi
+    ];
+
+    if ($filtros['q'] !== '') {
+        $like = '%' . $this->escaparComodinesLike($filtros['q']) . '%';
+        $sql .= '
+            AND (
+                per.NombrePer LIKE :qNombre ESCAPE \'\\\\\'
+                OR per.ApPatPer LIKE :qApPat ESCAPE \'\\\\\'
+                OR per.ApMatPer LIKE :qApMat ESCAPE \'\\\\\'
+                OR p.ClvPac LIKE :qFolio ESCAPE \'\\\\\'
+                OR CONCAT(
+                    per.NombrePer, \' \',
+                    per.ApPatPer, \' \',
+                    COALESCE(per.ApMatPer, \'\')
+                ) LIKE :qCompleto ESCAPE \'\\\\\'
+            )';
+        $params['qNombre'] = $like;
+        $params['qApPat'] = $like;
+        $params['qApMat'] = $like;
+        $params['qFolio'] = $like;
+        $params['qCompleto'] = $like;
+    }
+
+    if ($filtros['cita'] === 'CON_CITA_PROXIMA') {
+        $sql .= '
+            AND EXISTS (
+                SELECT 1
+                FROM cita cx
+                WHERE cx.ClvPac = p.ClvPac
+                  AND cx.ClvPsi = :clvPsiFiltroCita
+                  AND cx.EstadoCita = \'PROGRAMADA\'
+                  AND (
+                        cx.FechaCita > CURDATE()
+                        OR (
+                            cx.FechaCita = CURDATE()
+                            AND cx.HraInicioCita >= CURTIME()
+                        )
+                  )
+            )';
+        $params['clvPsiFiltroCita'] = $clvPsi;
+    } elseif ($filtros['cita'] === 'SIN_CITA_PROXIMA') {
+        $sql .= '
+            AND NOT EXISTS (
+                SELECT 1
+                FROM cita cx
+                WHERE cx.ClvPac = p.ClvPac
+                  AND cx.ClvPsi = :clvPsiFiltroCita
+                  AND cx.EstadoCita = \'PROGRAMADA\'
+                  AND (
+                        cx.FechaCita > CURDATE()
+                        OR (
+                            cx.FechaCita = CURDATE()
+                            AND cx.HraInicioCita >= CURTIME()
+                        )
+                  )
+            )';
+        $params['clvPsiFiltroCita'] = $clvPsi;
+    }
+
+    if ($filtros['actividad'] === 'ACTIVIDAD_RECIENTE') {
+        $sql .= '
+            AND (
+                EXISTS (
+                    SELECT 1
+                    FROM cita cAct
+                    WHERE cAct.ClvPac = p.ClvPac
+                      AND cAct.ClvPsi = :clvPsiFiltroActC
+                      AND cAct.EstadoCita = \'ASISTIDA\'
+                      AND cAct.FechaCita >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM seguimiento_sesion ssAct
+                    INNER JOIN historial_clinico hAct
+                        ON (hAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                         = (ssAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                    WHERE (hAct.ClvPac COLLATE utf8mb4_unicode_ci)
+                        = (p.ClvPac COLLATE utf8mb4_unicode_ci)
+                      AND (ssAct.ClvPsi COLLATE utf8mb4_unicode_ci)
+                        = (:clvPsiFiltroActS COLLATE utf8mb4_unicode_ci)
+                      AND DATE(ssAct.FechaRegistroSeg) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+                )
+            )';
+        $params['clvPsiFiltroActC'] = $clvPsi;
+        $params['clvPsiFiltroActS'] = $clvPsi;
+    } elseif ($filtros['actividad'] === 'SIN_ACTIVIDAD_RECIENTE') {
+        $sql .= '
+            AND NOT EXISTS (
+                SELECT 1
+                FROM cita cAct
+                WHERE cAct.ClvPac = p.ClvPac
+                  AND cAct.ClvPsi = :clvPsiFiltroActC
+                  AND cAct.EstadoCita = \'ASISTIDA\'
+                  AND cAct.FechaCita >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM seguimiento_sesion ssAct
+                INNER JOIN historial_clinico hAct
+                    ON (hAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                     = (ssAct.ClvHist COLLATE utf8mb4_unicode_ci)
+                WHERE (hAct.ClvPac COLLATE utf8mb4_unicode_ci)
+                    = (p.ClvPac COLLATE utf8mb4_unicode_ci)
+                  AND (ssAct.ClvPsi COLLATE utf8mb4_unicode_ci)
+                    = (:clvPsiFiltroActS COLLATE utf8mb4_unicode_ci)
+                  AND DATE(ssAct.FechaRegistroSeg) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+            )';
+        $params['clvPsiFiltroActC'] = $clvPsi;
+        $params['clvPsiFiltroActS'] = $clvPsi;
+    }
+
+    if ($filtros['pendiente'] === 'CON_PENDIENTE') {
+        $sql .= '
+            AND (
+                (
+                    EXISTS (
+                        SELECT 1
+                        FROM cita cA
+                        WHERE cA.ClvPac = p.ClvPac
+                          AND cA.ClvPsi = :clvPsiPendAsist
+                          AND cA.EstadoCita = \'ASISTIDA\'
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM historial_clinico hP
+                        WHERE hP.ClvPac = p.ClvPac
+                          AND hP.ClvPsi = :clvPsiPendHist
+                    )
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM cita cSeg
+                    INNER JOIN historial_clinico hSeg
+                        ON hSeg.ClvPac = cSeg.ClvPac
+                       AND hSeg.ClvCons = cSeg.ClvCons
+                       AND hSeg.ClvPsi = cSeg.ClvPsi
+                    WHERE cSeg.ClvPac = p.ClvPac
+                      AND cSeg.ClvPsi = :clvPsiPendSeg
+                      AND cSeg.EstadoCita = \'ASISTIDA\'
+                      AND NOT EXISTS (
+                            SELECT 1
+                            FROM seguimiento_sesion ss
+                            WHERE (ss.ClvCita COLLATE utf8mb4_unicode_ci) = cSeg.ClvCita
+                      )
+                )
+            )';
+        $params['clvPsiPendAsist'] = $clvPsi;
+        $params['clvPsiPendHist'] = $clvPsi;
+        $params['clvPsiPendSeg'] = $clvPsi;
+    } elseif ($filtros['pendiente'] === 'SIN_PENDIENTE') {
+        $sql .= '
+            AND NOT (
+                (
+                    EXISTS (
+                        SELECT 1
+                        FROM cita cA
+                        WHERE cA.ClvPac = p.ClvPac
+                          AND cA.ClvPsi = :clvPsiPendAsist
+                          AND cA.EstadoCita = \'ASISTIDA\'
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM historial_clinico hP
+                        WHERE hP.ClvPac = p.ClvPac
+                          AND hP.ClvPsi = :clvPsiPendHist
+                    )
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM cita cSeg
+                    INNER JOIN historial_clinico hSeg
+                        ON hSeg.ClvPac = cSeg.ClvPac
+                       AND hSeg.ClvCons = cSeg.ClvCons
+                       AND hSeg.ClvPsi = cSeg.ClvPsi
+                    WHERE cSeg.ClvPac = p.ClvPac
+                      AND cSeg.ClvPsi = :clvPsiPendSeg
+                      AND cSeg.EstadoCita = \'ASISTIDA\'
+                      AND NOT EXISTS (
+                            SELECT 1
+                            FROM seguimiento_sesion ss
+                            WHERE (ss.ClvCita COLLATE utf8mb4_unicode_ci) = cSeg.ClvCita
+                      )
+                )
+            )';
+        $params['clvPsiPendAsist'] = $clvPsi;
+        $params['clvPsiPendHist'] = $clvPsi;
+        $params['clvPsiPendSeg'] = $clvPsi;
+    }
+
+    return ['sql' => $sql, 'params' => $params];
+}
+
+private function ordenCatalogoExpedientesSql(string $orden): string
+{
+    return match ($orden) {
+        'NOMBRE_DESC' => 'NombrePer DESC, ApPatPer DESC, ApMatPer DESC, p.ClvPac DESC',
+        'ACTIVIDAD_RECIENTE' =>
+            '(UltimaActividadFecha IS NULL) ASC, UltimaActividadFecha DESC, NombrePer ASC, ApPatPer ASC',
+        'ACTIVIDAD_ANTIGUA' =>
+            '(UltimaActividadFecha IS NULL) ASC, UltimaActividadFecha ASC, NombrePer ASC, ApPatPer ASC',
+        default => 'NombrePer ASC, ApPatPer ASC, ApMatPer ASC, p.ClvPac ASC',
+    };
+}
+
+private function escaparComodinesLike(string $valor): string
+{
+    return str_replace(
+        ['\\', '%', '_'],
+        ['\\\\', '\\%', '\\_'],
+        $valor
+    );
+}
+
+/**
+ * @param array<string, mixed> $fila
+ * @return array<string, mixed>
+ */
+private function enriquecerCatalogoExpediente(array $fila): array
+{
+    $totalAsistidas = (int) ($fila['TotalAsistidas'] ?? 0);
+    $totalHistorias = (int) ($fila['TotalHistorias'] ?? 0);
+    $segPend = (int) ($fila['TotalSeguimientosPendientes'] ?? 0);
+    $tieneProxima = !empty($fila['ProximaFecha']);
+
+    $historiaPendiente = $totalAsistidas > 0 && $totalHistorias === 0;
+    $conPendiente = $historiaPendiente || $segPend > 0;
+
+    $fila['TieneCitaProxima'] = $tieneProxima;
+    $fila['TienePendiente'] = $conPendiente;
+    $fila['HistoriaPendiente'] = $historiaPendiente;
+    $fila['SeguimientoPendiente'] = $segPend > 0;
+
+    /*
+     * Misma regla de 90 días que el filtro SQL:
+     * UltimaActividadFecha = CASE NULL-safe entre ASISTIDA y seguimiento.
+     */
+    $actividadReciente = false;
+    $ultimaActividad = trim((string) ($fila['UltimaActividadFecha'] ?? ''));
+    if ($ultimaActividad !== '') {
+        try {
+            $fechaAct = new \DateTimeImmutable($ultimaActividad);
+            $limite = (new \DateTimeImmutable('today'))->modify('-90 days');
+            $actividadReciente = $fechaAct >= $limite;
+        } catch (\Throwable $e) {
+            $actividadReciente = false;
+        }
+    }
+    $fila['ActividadReciente'] = $actividadReciente;
+    $fila['Iniciales'] = $this->calcularIniciales(
+        (string) ($fila['NombrePer'] ?? ''),
+        (string) ($fila['ApPatPer'] ?? '')
+    );
+
+    $foto = trim((string) ($fila['FotoPerfilPac'] ?? ''));
+    $fotoPersona = trim((string) ($fila['FotoPerfilPer'] ?? ''));
+    $fotoEsDefault = $foto === ''
+        || $foto === 'default.png'
+        || $foto === 'perfil-default.png';
+
+    if ($fotoEsDefault && $fotoPersona !== '') {
+        $foto = $fotoPersona;
+        $fotoEsDefault = $foto === 'default.png'
+            || $foto === 'perfil-default.png';
+    }
+
+    $fila['TieneFoto'] = !$fotoEsDefault && $foto !== '';
+    $fila['FotoArchivo'] = $fila['TieneFoto'] ? $foto : '';
+
+    return $fila;
+}
+
 public function obtenerParaPsicologo(
     string $clvPac,
     string $clvPsi
