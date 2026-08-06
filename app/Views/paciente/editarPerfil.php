@@ -72,6 +72,17 @@ unset($_SESSION['error']);
         </div>
     <?php endif; ?>
 
+    <?php
+        $clavesSeccionesPendientes = is_array($clavesSeccionesPendientes ?? null)
+            ? $clavesSeccionesPendientes
+            : [];
+        $pendientePersonal = in_array('DATOS_PERSONALES', $clavesSeccionesPendientes, true);
+        $pendienteContacto = in_array('CONTACTO', $clavesSeccionesPendientes, true);
+        $pendienteDireccion = in_array('DIRECCION', $clavesSeccionesPendientes, true);
+
+        require __DIR__ . '/partials/aviso-perfil-incompleto.php';
+    ?>
+
     <form
         class="paciente-profile-form"
         method="POST"
@@ -119,11 +130,20 @@ unset($_SESSION['error']);
             </div>
         </section>
 
-        <section class="paciente-profile-card" aria-labelledby="personal-titulo">
+        <section
+            class="paciente-profile-card<?= $pendientePersonal ? ' is-pending' : ''; ?>"
+            aria-labelledby="personal-titulo"
+            id="seccion-datos-personales"
+        >
             <h2 id="personal-titulo">
                 <i class="bi bi-person" aria-hidden="true"></i>
                 Información personal
             </h2>
+            <?php if ($pendientePersonal): ?>
+                <p class="paciente-profile-card-help">
+                    Completa fecha de nacimiento y género para dejar esta sección al día.
+                </p>
+            <?php endif; ?>
 
             <div class="paciente-profile-form-grid">
                 <div class="paciente-field">
@@ -222,14 +242,43 @@ unset($_SESSION['error']);
             </div>
         </section>
 
-        <section class="paciente-profile-card" aria-labelledby="direccion-titulo">
+        <?php if ($pendienteContacto): ?>
+            <section
+                class="paciente-profile-card is-pending"
+                aria-labelledby="contacto-titulo"
+                id="seccion-contacto"
+            >
+                <h2 id="contacto-titulo">
+                    <i class="bi bi-telephone" aria-hidden="true"></i>
+                    Información de contacto
+                </h2>
+                <p class="paciente-profile-card-help">
+                    Tu teléfono está pendiente. Actualízalo en
+                    <a href="<?= $escapar(Helper::baseUrl('paciente/configuracion')); ?>">
+                        Configuración
+                    </a>
+                    para completar tu perfil.
+                </p>
+            </section>
+        <?php endif; ?>
+
+        <section
+            class="paciente-profile-card<?= $pendienteDireccion ? ' is-pending' : ''; ?>"
+            aria-labelledby="direccion-titulo"
+            id="seccion-direccion"
+        >
             <h2 id="direccion-titulo">
                 <i class="bi bi-geo-alt" aria-hidden="true"></i>
                 Dirección
             </h2>
             <p class="paciente-profile-card-help">
-                Completa estos campos solo si deseas registrar o actualizar
-                tu dirección. Si dejas todo vacío, no se modifica.
+                <?php if ($pendienteDireccion): ?>
+                    Registra país, estado, municipio, colonia, calle, código postal
+                    y número exterior. El número interior y la referencia son opcionales.
+                <?php else: ?>
+                    Completa estos campos solo si deseas registrar o actualizar
+                    tu dirección. Si dejas todo vacío, no se modifica.
+                <?php endif; ?>
             </p>
 
             <div class="paciente-profile-form-grid">
@@ -291,14 +340,40 @@ unset($_SESSION['error']);
 (() => {
     const input = document.getElementById('FotoPerfilPer');
     const avatar = document.getElementById('previewAvatar');
-    if (!input || !avatar) return;
+    if (input && avatar) {
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+            if (!file) return;
 
-    input.addEventListener('change', () => {
-        const file = input.files && input.files[0];
-        if (!file) return;
+            const url = URL.createObjectURL(file);
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Vista previa';
+            img.id = 'previewFoto';
+            avatar.replaceChildren(img);
+        });
+    }
 
-        const url = URL.createObjectURL(file);
-        avatar.innerHTML = '<img src="' + url + '" alt="Vista previa" id="previewFoto">';
-    });
+    const form = document.querySelector('.paciente-profile-form');
+    if (!form) return;
+
+    const primerError = form.querySelector('.paciente-field-error');
+    if (primerError) {
+        const campo = primerError.closest('.paciente-field');
+        const control = campo
+            ? campo.querySelector('input, select, textarea')
+            : null;
+        if (control && typeof control.focus === 'function') {
+            control.focus();
+            return;
+        }
+    }
+
+    const pendiente = form.querySelector('.paciente-profile-card.is-pending');
+    if (!pendiente) return;
+    const primerCampo = pendiente.querySelector('input, select, textarea');
+    if (primerCampo && typeof primerCampo.focus === 'function') {
+        primerCampo.focus();
+    }
 })();
 </script>

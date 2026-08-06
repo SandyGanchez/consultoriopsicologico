@@ -17,6 +17,7 @@ use App\Services\AgendaService;
 use App\Services\CorreoCitaService;
 use App\Services\CuentaService;
 use App\Services\NotificacionService;
+use App\Services\PerfilPacienteService;
 use App\Services\PrivacidadService;
 use PDOException;
 use RuntimeException;
@@ -103,6 +104,9 @@ class PacienteController extends Controller
         $clvPac = (string) ($paciente['ClvPac'] ?? '');
         $clvUsu = (string) $this->usuario['ClvUsu'];
 
+        $estadoPerfil = (new PerfilPacienteService())
+            ->sincronizarAvisoPerfilIncompleto($clvPac, $clvUsu);
+
         $citaModel = new Cita();
         $notificacionModel = new Notificacion();
 
@@ -159,6 +163,9 @@ class PacienteController extends Controller
                 'actividadReciente' => $actividadReciente,
                 'notificacionesRecientes' => $notificacionesRecientes,
                 'notificacionesNoLeidas' => $notificacionesNoLeidas,
+                'perfilIncompleto' => empty($estadoPerfil['completo']),
+                'seccionesPerfilPendientes' => $estadoPerfil['etiquetasSecciones']
+                    ?? [],
                 'cargarDashboardCss' => true
             ],
             'paciente'
@@ -932,12 +939,21 @@ public function detalleCita(): void
             Response::redirect('paciente');
         }
 
+        $estadoPerfil = (new PerfilPacienteService())->evaluarPorUsuario(
+            (string) $this->usuario['ClvUsu']
+        );
+
         $this->view(
             'paciente/perfil',
             [
                 'titulo' => 'Mi perfil',
                 'usuario' => $this->usuario,
                 'perfil' => $perfil,
+                'perfilIncompleto' => empty($estadoPerfil['completo']),
+                'seccionesPerfilPendientes' => $estadoPerfil['etiquetasSecciones']
+                    ?? [],
+                'clavesSeccionesPendientes' => $estadoPerfil['seccionesPendientes']
+                    ?? [],
                 'cargarPerfilCss' => true
             ],
             'paciente'
@@ -958,6 +974,9 @@ public function detalleCita(): void
 
         $errores = Session::getFlash('perfil_errores');
         $old = Session::getFlash('perfil_old');
+        $estadoPerfil = (new PerfilPacienteService())->evaluarPorUsuario(
+            (string) $this->usuario['ClvUsu']
+        );
 
         $this->view(
             'paciente/editarPerfil',
@@ -968,6 +987,11 @@ public function detalleCita(): void
                 'errores' => is_array($errores) ? $errores : [],
                 'old' => is_array($old) ? $old : [],
                 'csrf' => Session::csrfToken(),
+                'perfilIncompleto' => empty($estadoPerfil['completo']),
+                'seccionesPerfilPendientes' => $estadoPerfil['etiquetasSecciones']
+                    ?? [],
+                'clavesSeccionesPendientes' => $estadoPerfil['seccionesPendientes']
+                    ?? [],
                 'cargarPerfilCss' => true
             ],
             'paciente'
@@ -1139,9 +1163,19 @@ public function detalleCita(): void
                 $this->usuario = $usuarioSesion;
             }
 
+            $pacienteSync = (new Paciente())->obtenerPorUsuario($clvUsu);
+
+            if ($pacienteSync !== null) {
+                (new PerfilPacienteService())
+                    ->sincronizarAvisoPerfilIncompleto(
+                        (string) ($pacienteSync['ClvPac'] ?? ''),
+                        $clvUsu
+                    );
+            }
+
             Session::set(
                 'success',
-                'Tu perfil fue actualizado correctamente.'
+                'Tu información fue actualizada correctamente.'
             );
 
             if (
@@ -1268,6 +1302,17 @@ public function detalleCita(): void
             $this->usuario = is_array(Session::get('usuario'))
                 ? Session::get('usuario')
                 : $this->usuario;
+
+            $clvUsu = (string) ($this->usuario['ClvUsu'] ?? '');
+            $pacienteSync = (new Paciente())->obtenerPorUsuario($clvUsu);
+
+            if ($pacienteSync !== null) {
+                (new PerfilPacienteService())
+                    ->sincronizarAvisoPerfilIncompleto(
+                        (string) ($pacienteSync['ClvPac'] ?? ''),
+                        $clvUsu
+                    );
+            }
         }
 
         $this->flashConfiguracion(

@@ -6,9 +6,11 @@ use App\Core\Controller;
 use App\Core\Response;
 use App\Core\Session;
 use App\Helpers\Helper;
+use App\Models\Paciente;
 use App\Models\Usuario;
 use App\Services\AuthService;
 use App\Services\InstalacionConsultorioService;
+use App\Services\PerfilPacienteService;
 
 class AuthController extends Controller
 {
@@ -169,9 +171,46 @@ class AuthController extends Controller
         return $iniciales !== '' ? $iniciales : 'C';
     }
 
+    /**
+     * Sincroniza aviso de perfil incompleto tras login (solo paciente).
+     */
+    private function sincronizarPerfilIncompletoPaciente(array $usuario): void
+    {
+        $rol = strtoupper(trim((string) ($usuario['RolUsu'] ?? '')));
+
+        if ($rol !== 'PACIENTE') {
+            return;
+        }
+
+        if ((int) ($usuario['RequiereCambioContrasena'] ?? 0) === 1) {
+            return;
+        }
+
+        $clvUsu = trim((string) ($usuario['ClvUsu'] ?? ''));
+
+        if ($clvUsu === '') {
+            return;
+        }
+
+        $paciente = (new Paciente())->obtenerPorUsuario($clvUsu);
+
+        if ($paciente === null) {
+            return;
+        }
+
+        (new PerfilPacienteService())->sincronizarAvisoPerfilIncompleto(
+            (string) ($paciente['ClvPac'] ?? ''),
+            $clvUsu
+        );
+    }
+
     private function redirigirSegunRol(array $usuario): void
     {
         $rol = strtoupper(trim((string) ($usuario['RolUsu'] ?? '')));
+
+        if ($rol === 'PACIENTE') {
+            $this->sincronizarPerfilIncompletoPaciente($usuario);
+        }
 
         if (
             $rol === 'PACIENTE'
@@ -449,6 +488,7 @@ public function saveTemporaryPassword(): void
                 (string) ($usuario['ClvUsu'] ?? '')
             )
         ) {
+            $this->sincronizarPerfilIncompletoPaciente($usuario);
             Response::redirect('privacidad/consentimiento');
             return;
         }
@@ -456,6 +496,8 @@ public function saveTemporaryPassword(): void
         $intencion = HomeController::consumirIntencionAgendarDesdeSesion();
 
         if ($intencion !== null) {
+            $this->sincronizarPerfilIncompletoPaciente($usuario);
+
             $query = [
                 'psicologo' => $intencion['psicologo']
             ];
