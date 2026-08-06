@@ -739,16 +739,16 @@ $direccionInicial = Helper::construirDireccionCompleta($datos);
 
             </div>
 
+            <?php
+                require __DIR__ . '/partials/redes.php';
+            ?>
+
         </div>
 
         <aside class="clinic-settings-grid__aside">
 
             <?php
                 require __DIR__ . '/partials/horario.php';
-            ?>
-
-            <?php
-                require __DIR__ . '/partials/redes.php';
             ?>
 
             <div class="settings-card mt-3">

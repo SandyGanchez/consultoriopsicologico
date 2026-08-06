@@ -19,163 +19,447 @@ $iconos = [
 
 ?>
 
-<div class="settings-card mt-3" id="redes-sociales">
-    <div class="settings-card__header">
-        <i class="bi bi-share" aria-hidden="true"></i>
-        <span>Redes sociales y enlaces</span>
+<div
+    class="settings-card social-settings-section"
+    id="redes-sociales"
+>
+    <div class="social-settings-section__intro">
+        <div class="settings-card__header mb-0">
+            <i class="bi bi-share" aria-hidden="true"></i>
+            <span>Redes sociales</span>
+        </div>
+
+        <p class="social-settings-section__desc">
+            Administra los enlaces públicos del consultorio.
+            Solo se publican los que estén activos.
+        </p>
+
+        <div class="social-settings-section__toolbar">
+            <button
+                type="button"
+                class="btn btn-settings-primary social-btn-primary"
+                data-bs-toggle="collapse"
+                data-bs-target="#formNuevaRedSocial"
+                aria-expanded="false"
+                aria-controls="formNuevaRedSocial"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Agregar red social
+            </button>
+        </div>
     </div>
 
-    <p class="text-muted small mb-3">
-        Enlaces institucionales del consultorio. Solo se publican los que estén activos.
-    </p>
+    <div class="collapse" id="formNuevaRedSocial">
+        <div class="social-form-card" aria-labelledby="tituloNuevaRedSocial">
+            <h3 class="social-form-card__title" id="tituloNuevaRedSocial">
+                Nueva red social
+            </h3>
+
+            <form
+                method="POST"
+                action="<?= Helper::baseUrl('consultorio/configuracion/redes/guardar'); ?>"
+                class="social-network-form"
+            >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"
+                >
+
+                <div class="row g-4">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label mb-2" for="tipoRedCons">
+                            Plataforma
+                        </label>
+                        <select
+                            name="tipoRed"
+                            id="tipoRedCons"
+                            class="form-select"
+                            required
+                        >
+                            <?php foreach ($plataformasRed as $plat): ?>
+                                <option
+                                    value="<?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                    <?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text mt-1">
+                            Selecciona la red social que deseas mostrar.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-7">
+                        <label class="form-label mb-2" for="urlRedCons">
+                            URL del perfil
+                        </label>
+                        <input
+                            type="url"
+                            name="urlRed"
+                            id="urlRedCons"
+                            class="form-control"
+                            required
+                            maxlength="255"
+                            placeholder="https://"
+                            autocomplete="url"
+                        >
+                        <div class="form-text mt-1">
+                            Ingresa el enlace completo, por ejemplo:
+                            https://www.facebook.com/tuconsultorio
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <label class="form-label mb-2" for="etiquetaRedCons">
+                            Etiqueta
+                        </label>
+                        <input
+                            type="text"
+                            name="etiquetaRed"
+                            id="etiquetaRedCons"
+                            class="form-control"
+                            maxlength="60"
+                        >
+                        <div class="form-text mt-1">
+                            Texto opcional visible junto a la plataforma.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label mb-2" for="ordenRedCons">
+                            Orden de aparición
+                        </label>
+                        <input
+                            type="number"
+                            name="ordenRed"
+                            id="ordenRedCons"
+                            class="form-control"
+                            min="1"
+                            max="9999"
+                            value="1"
+                            required
+                        >
+                        <div class="form-text mt-1">
+                            Los números menores aparecen primero.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label mb-2" for="estadoRedCons">
+                            Estado
+                        </label>
+                        <select
+                            name="estadoRed"
+                            id="estadoRedCons"
+                            class="form-select"
+                        >
+                            <option value="ACTIVA">ACTIVA</option>
+                            <option value="INACTIVA">INACTIVA</option>
+                        </select>
+                        <div class="form-text mt-1">
+                            Define si la red se mostrará en la página pública.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="social-network-actions social-network-actions--form">
+                            <button
+                                type="submit"
+                                class="btn btn-settings-primary social-btn-primary"
+                            >
+                                Guardar
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-settings-secondary social-btn-neutral"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#formNuevaRedSocial"
+                                aria-expanded="true"
+                                aria-controls="formNuevaRedSocial"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <?php if ($redesSociales === []): ?>
-        <p class="text-muted">Aún no hay redes registradas.</p>
+        <div class="social-empty-state" role="status">
+            <div class="social-empty-state__icon" aria-hidden="true">
+                <i class="bi bi-share"></i>
+            </div>
+            <h3 class="social-empty-state__title">
+                Aún no has agregado redes sociales.
+            </h3>
+            <p class="social-empty-state__desc">
+                Agrega los perfiles que deseas mostrar en la página pública
+                del consultorio.
+            </p>
+            <button
+                type="button"
+                class="btn btn-settings-primary social-btn-primary"
+                data-bs-toggle="collapse"
+                data-bs-target="#formNuevaRedSocial"
+                aria-expanded="false"
+                aria-controls="formNuevaRedSocial"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Agregar red social
+            </button>
+        </div>
     <?php else: ?>
-        <div class="table-responsive mb-4">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Plataforma</th>
-                        <th>URL</th>
-                        <th>Orden</th>
-                        <th>Estado</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($redesSociales as $red): ?>
-                        <?php
-                        $activa = ($red['EstadoRed'] ?? '') === 'ACTIVA';
-                        $clvRed = (string) ($red['ClvRed'] ?? '');
-                        ?>
-                        <tr>
-                            <td>
-                                <i class="bi <?= htmlspecialchars($iconos[$red['TipoRed'] ?? ''] ?? 'bi-globe', ENT_QUOTES, 'UTF-8'); ?>" aria-hidden="true"></i>
-                                <?= htmlspecialchars((string) ($red['TipoRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        <ul class="social-network-list list-unstyled mb-0">
+            <?php foreach ($redesSociales as $red): ?>
+                <?php
+                $activa = ($red['EstadoRed'] ?? '') === 'ACTIVA';
+                $clvRed = (string) ($red['ClvRed'] ?? '');
+                $tipoRed = (string) ($red['TipoRed'] ?? '');
+                $icono = $iconos[$tipoRed] ?? 'bi-globe';
+                $editId = 'editRed' . $clvRed;
+                $estadoClase = $activa
+                    ? 'social-status-badge--activa'
+                    : 'social-status-badge--inactiva';
+                ?>
+                <li class="social-network-item">
+                    <div class="social-network-header">
+                        <div class="social-network-identity">
+                            <span
+                                class="social-network-icon"
+                                aria-hidden="true"
+                            >
+                                <i class="bi <?= htmlspecialchars($icono, ENT_QUOTES, 'UTF-8'); ?>"></i>
+                            </span>
+                            <div class="social-network-meta">
+                                <div class="social-network-title-row">
+                                    <h3 class="social-network-name">
+                                        <?= htmlspecialchars($tipoRed, ENT_QUOTES, 'UTF-8'); ?>
+                                    </h3>
+                                    <span class="social-status-badge <?= $estadoClase; ?>">
+                                        <?= $activa ? 'Activa' : 'Inactiva'; ?>
+                                    </span>
+                                </div>
                                 <?php if (!empty($red['EtiquetaRed'])): ?>
-                                    <div class="small text-muted"><?= htmlspecialchars((string) $red['EtiquetaRed'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <p class="social-network-label">
+                                        <?= htmlspecialchars((string) $red['EtiquetaRed'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </p>
                                 <?php endif; ?>
-                            </td>
-                            <td class="small text-break"><?= htmlspecialchars((string) ($red['URLRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?= (int) ($red['OrdenRed'] ?? 1); ?></td>
-                            <td><?= $activa ? 'ACTIVA' : 'INACTIVA'; ?></td>
-                            <td class="text-end">
+                                <p class="social-url">
+                                    <?= htmlspecialchars((string) ($red['URLRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                </p>
+                                <p class="social-network-order">
+                                    Orden: <?= (int) ($red['OrdenRed'] ?? 1); ?>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="social-network-actions">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-settings-secondary social-btn-edit"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#<?= htmlspecialchars($editId, ENT_QUOTES, 'UTF-8'); ?>"
+                                aria-expanded="false"
+                                aria-controls="<?= htmlspecialchars($editId, ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+                                Editar
+                            </button>
+                            <form
+                                method="POST"
+                                action="<?= Helper::baseUrl('consultorio/configuracion/redes/estado'); ?>"
+                                class="social-network-state-form"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="clvRed"
+                                    value="<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="accion"
+                                    value="<?= $activa ? 'inactivar' : 'activar'; ?>"
+                                >
                                 <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-secondary"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#editRed<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
-                                    aria-expanded="false"
+                                    type="submit"
+                                    class="btn btn-sm <?= $activa ? 'social-btn-warn' : 'btn-settings-primary social-btn-primary'; ?>"
                                 >
-                                    Editar
+                                    <?= $activa ? 'Desactivar' : 'Activar'; ?>
                                 </button>
-                                <form
-                                    method="POST"
-                                    action="<?= Helper::baseUrl('consultorio/configuracion/redes/estado'); ?>"
-                                    class="d-inline"
+                            </form>
+                        </div>
+                    </div>
+
+                    <div
+                        class="collapse social-network-edit"
+                        id="<?= htmlspecialchars($editId, ENT_QUOTES, 'UTF-8'); ?>"
+                    >
+                        <div class="social-form-card social-form-card--edit">
+                            <h3 class="social-form-card__title">
+                                Editar red social
+                            </h3>
+
+                            <form
+                                method="POST"
+                                action="<?= Helper::baseUrl('consultorio/configuracion/redes/actualizar'); ?>"
+                                class="social-network-form"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"
                                 >
-                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <input type="hidden" name="clvRed" value="<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <input type="hidden" name="accion" value="<?= $activa ? 'inactivar' : 'activar'; ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                                        <?= $activa ? 'Inactivar' : 'Activar'; ?>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        <tr class="collapse" id="editRed<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>">
-                            <td colspan="5">
-                                <form
-                                    method="POST"
-                                    action="<?= Helper::baseUrl('consultorio/configuracion/redes/actualizar'); ?>"
-                                    class="row g-2"
+                                <input
+                                    type="hidden"
+                                    name="clvRed"
+                                    value="<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
                                 >
-                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <input type="hidden" name="clvRed" value="<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <div class="col-md-3">
-                                        <label class="form-label">Plataforma</label>
-                                        <select name="tipoRed" class="form-select" required>
+
+                                <div class="row g-4">
+                                    <div class="col-12 col-md-5">
+                                        <label
+                                            class="form-label mb-2"
+                                            for="tipoRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                            Plataforma
+                                        </label>
+                                        <select
+                                            name="tipoRed"
+                                            id="tipoRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-select"
+                                            required
+                                        >
                                             <?php foreach ($plataformasRed as $plat): ?>
-                                                <option value="<?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>"
-                                                    <?= ($red['TipoRed'] ?? '') === $plat ? 'selected' : ''; ?>>
+                                                <option
+                                                    value="<?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>"
+                                                    <?= $tipoRed === $plat ? 'selected' : ''; ?>
+                                                >
                                                     <?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <div class="form-text mt-1">
+                                            Selecciona la red social que deseas mostrar.
+                                        </div>
                                     </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">URL</label>
-                                        <input type="url" name="urlRed" class="form-control" required maxlength="255"
-                                            value="<?= htmlspecialchars((string) ($red['URLRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Etiqueta</label>
-                                        <input type="text" name="etiquetaRed" class="form-control" maxlength="60"
-                                            value="<?= htmlspecialchars((string) ($red['EtiquetaRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-                                    </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">Orden</label>
-                                        <input type="number" name="ordenRed" class="form-control" min="1" max="9999" required
-                                            value="<?= (int) ($red['OrdenRed'] ?? 1); ?>">
-                                    </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">Estado</label>
-                                        <select name="estadoRed" class="form-select">
-                                            <option value="ACTIVA" <?= $activa ? 'selected' : ''; ?>>ACTIVA</option>
-                                            <option value="INACTIVA" <?= !$activa ? 'selected' : ''; ?>>INACTIVA</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-sm btn-primary">Guardar cambios</button>
-                                    </div>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php endif; ?>
 
-    <h3 class="h6">Registrar red</h3>
-    <form
-        method="POST"
-        action="<?= Helper::baseUrl('consultorio/configuracion/redes/guardar'); ?>"
-        class="row g-2"
-    >
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-        <div class="col-md-3">
-            <label class="form-label" for="tipoRedCons">Plataforma</label>
-            <select name="tipoRed" id="tipoRedCons" class="form-select" required>
-                <?php foreach ($plataformasRed as $plat): ?>
-                    <option value="<?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>">
-                        <?= htmlspecialchars($plat, ENT_QUOTES, 'UTF-8'); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-md-5">
-            <label class="form-label" for="urlRedCons">URL</label>
-            <input type="url" name="urlRed" id="urlRedCons" class="form-control" required maxlength="255" placeholder="https://">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label" for="etiquetaRedCons">Etiqueta</label>
-            <input type="text" name="etiquetaRed" id="etiquetaRedCons" class="form-control" maxlength="60">
-        </div>
-        <div class="col-md-1">
-            <label class="form-label" for="ordenRedCons">Orden</label>
-            <input type="number" name="ordenRed" id="ordenRedCons" class="form-control" min="1" max="9999" value="1" required>
-        </div>
-        <div class="col-md-1">
-            <label class="form-label" for="estadoRedCons">Estado</label>
-            <select name="estadoRed" id="estadoRedCons" class="form-select">
-                <option value="ACTIVA">ACTIVA</option>
-                <option value="INACTIVA">INACTIVA</option>
-            </select>
-        </div>
-        <div class="col-12">
-            <button type="submit" class="btn btn-primary">Registrar red</button>
-        </div>
-    </form>
+                                    <div class="col-12 col-md-7">
+                                        <label
+                                            class="form-label mb-2"
+                                            for="urlRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                            URL del perfil
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="urlRed"
+                                            id="urlRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-control"
+                                            required
+                                            maxlength="255"
+                                            value="<?= htmlspecialchars((string) ($red['URLRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                        <div class="form-text mt-1">
+                                            Ingresa el enlace completo del perfil.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <label
+                                            class="form-label mb-2"
+                                            for="etiquetaRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                            Etiqueta
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="etiquetaRed"
+                                            id="etiquetaRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-control"
+                                            maxlength="60"
+                                            value="<?= htmlspecialchars((string) ($red['EtiquetaRed'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                    </div>
+
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <label
+                                            class="form-label mb-2"
+                                            for="ordenRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                            Orden de aparición
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="ordenRed"
+                                            id="ordenRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-control"
+                                            min="1"
+                                            max="9999"
+                                            required
+                                            value="<?= (int) ($red['OrdenRed'] ?? 1); ?>"
+                                        >
+                                        <div class="form-text mt-1">
+                                            Los números menores aparecen primero.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <label
+                                            class="form-label mb-2"
+                                            for="estadoRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                        >
+                                            Estado
+                                        </label>
+                                        <select
+                                            name="estadoRed"
+                                            id="estadoRedEdit<?= htmlspecialchars($clvRed, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-select"
+                                        >
+                                            <option value="ACTIVA" <?= $activa ? 'selected' : ''; ?>>
+                                                ACTIVA
+                                            </option>
+                                            <option value="INACTIVA" <?= !$activa ? 'selected' : ''; ?>>
+                                                INACTIVA
+                                            </option>
+                                        </select>
+                                        <div class="form-text mt-1">
+                                            Define si la red se mostrará en la página pública.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="social-network-actions social-network-actions--form">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-settings-primary social-btn-primary"
+                                            >
+                                                Guardar cambios
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="btn btn-settings-secondary social-btn-neutral"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#<?= htmlspecialchars($editId, ENT_QUOTES, 'UTF-8'); ?>"
+                                                aria-expanded="true"
+                                                aria-controls="<?= htmlspecialchars($editId, ENT_QUOTES, 'UTF-8'); ?>"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 </div>
