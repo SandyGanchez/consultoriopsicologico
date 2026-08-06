@@ -2,15 +2,18 @@
 
 /**
  * Procesa confirmaciones y recordatorios de cita (CLI).
+ * También genera la notificación de campana del recordatorio (Fase 3D)
+ * una sola vez por fila de correo_cita (ledger UNIQUE).
  *
  * Uso:
  *   php database/scripts/procesar_correos_citas.php
  *
- * Documentación de cron (no aplicar en Hostinger todavía):
- *   0 * * * * php /ruta/a/private/database/scripts/procesar_correos_citas.php >> /ruta/logs/correos_citas.log 2>&1
+ * Cron sugerido (cada 15 min; no aplicar en Hostinger desde esta fase):
+ *   minuto 0,15,30,45 * * * * php /ruta/private/database/scripts/procesar_correos_citas.php >> /ruta/logs/correos_citas.log 2>&1
  *
  * Variables útiles:
- *   MAIL_CITA_DRY_RUN=1  → no envía SMTP; marca ENVIADO en pruebas.
+ *   MAIL_CITA_DRY_RUN=1       → no envía SMTP; marca ENVIADO en pruebas.
+ *   CITA_RECORDATORIO_HORAS=24 → anticipación (1–168); no aceptar vía web.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -56,6 +59,7 @@ try {
 
     echo 'OK '
         . 'recuperados=' . $resumen['recuperados']
+        . ' reactivados=' . ($resumen['reactivados'] ?? 0)
         . ' procesados=' . $resumen['procesados']
         . ' enviados=' . $resumen['enviados']
         . ' fallidos=' . $resumen['fallidos']
