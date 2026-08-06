@@ -2262,12 +2262,114 @@ public function cambiarEstadoRedProfesional(): void
 
 public function expediente(): void
 {
-    Session::set(
-        'success',
-        'Abre el expediente clínico desde Mis pacientes.'
-    );
+    Response::redirect('psicologo/expedientes');
+}
 
-    Response::redirect('psicologo/pacientes');
+public function expedientes(): void
+{
+    $contexto = $this->obtenerContextoPsicologo();
+    $clvPsi = (string) $contexto['psicologo']['ClvPsi'];
+
+    $q = trim((string) ($_GET['q'] ?? ''));
+    if (mb_strlen($q, 'UTF-8') > 80) {
+        $q = mb_substr($q, 0, 80, 'UTF-8');
+    }
+
+    $actividad = strtoupper(trim((string) ($_GET['actividad'] ?? 'TODOS')));
+    $cita = strtoupper(trim((string) ($_GET['cita'] ?? 'TODOS')));
+    $pendiente = strtoupper(trim((string) ($_GET['pendiente'] ?? 'TODOS')));
+    $orden = strtoupper(trim((string) ($_GET['orden'] ?? 'NOMBRE_ASC')));
+    $pagina = max(1, (int) ($_GET['pagina'] ?? 1));
+
+    $actividades = ['TODOS', 'ACTIVIDAD_RECIENTE', 'SIN_ACTIVIDAD_RECIENTE'];
+    $citas = ['TODOS', 'CON_CITA_PROXIMA', 'SIN_CITA_PROXIMA'];
+    $pendientes = ['TODOS', 'CON_PENDIENTE', 'SIN_PENDIENTE'];
+    $ordenes = [
+        'NOMBRE_ASC',
+        'NOMBRE_DESC',
+        'ACTIVIDAD_RECIENTE',
+        'ACTIVIDAD_ANTIGUA'
+    ];
+
+    if (!in_array($actividad, $actividades, true)) {
+        $actividad = 'TODOS';
+    }
+    if (!in_array($cita, $citas, true)) {
+        $cita = 'TODOS';
+    }
+    if (!in_array($pendiente, $pendientes, true)) {
+        $pendiente = 'TODOS';
+    }
+    if (!in_array($orden, $ordenes, true)) {
+        $orden = 'NOMBRE_ASC';
+    }
+
+    $pacienteModel = new Paciente();
+    $errorCarga = false;
+    $catalogo = [
+        'items' => [],
+        'total' => 0,
+        'pagina' => 1,
+        'porPagina' => 12,
+        'totalPaginas' => 1,
+        'desde' => 0,
+        'hasta' => 0
+    ];
+    $resumen = [
+        'total' => 0,
+        'conCitaProxima' => 0,
+        'conPendiente' => 0,
+        'actividadReciente' => 0
+    ];
+
+    try {
+        $catalogo = $pacienteModel->listarCatalogoExpedientes($clvPsi, [
+            'q' => $q,
+            'actividad' => $actividad,
+            'cita' => $cita,
+            'pendiente' => $pendiente,
+            'orden' => $orden,
+            'pagina' => $pagina,
+            'porPagina' => 12
+        ]);
+        $resumen = $pacienteModel->resumenCatalogoExpedientes($clvPsi);
+    } catch (\Throwable $e) {
+        error_log('PsicologoController::expedientes: ' . $e->getMessage());
+        $errorCarga = true;
+    }
+
+    $filtrosActivos = $q !== ''
+        || $actividad !== 'TODOS'
+        || $cita !== 'TODOS'
+        || $pendiente !== 'TODOS'
+        || $orden !== 'NOMBRE_ASC';
+
+    $this->view(
+        'psicologo/expedientes/index',
+        [
+            'titulo' => 'Expedientes',
+            'usuario' => $this->usuario,
+            'psicologo' => $contexto['psicologo'],
+            'consultorio' => $contexto['consultorio'],
+            'expedientes' => $catalogo['items'],
+            'totalExpedientes' => $catalogo['total'],
+            'paginaActual' => $catalogo['pagina'],
+            'porPagina' => $catalogo['porPagina'],
+            'totalPaginas' => $catalogo['totalPaginas'],
+            'desde' => $catalogo['desde'],
+            'hasta' => $catalogo['hasta'],
+            'resumen' => $resumen,
+            'q' => $q,
+            'filtroActividad' => $actividad,
+            'filtroCita' => $cita,
+            'filtroPendiente' => $pendiente,
+            'orden' => $orden,
+            'filtrosActivos' => $filtrosActivos,
+            'errorCarga' => $errorCarga,
+            'cargarExpedientesPsicologo' => true
+        ],
+        'psicologo'
+    );
 }
 
 public function expedientePaciente(string $clvPac): void

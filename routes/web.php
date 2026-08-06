@@ -419,6 +419,11 @@ return [
             'expediente'
         ],
 
+        '/psicologo/expedientes' => [
+            PsicologoController::class,
+            'expedientes'
+        ],
+
         '/psicologo/pacientes/ver/{id}' => [
             PsicologoController::class,
             'verPaciente'

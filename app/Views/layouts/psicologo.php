@@ -107,6 +107,17 @@ $titulo = $titulo ?? 'Panel del especialista';
 
     <?php endif; ?>
 
+    <?php if (!empty($cargarExpedientesPsicologo)): ?>
+
+        <link
+            rel="stylesheet"
+            href="<?= Helper::baseUrl(
+                'assets/css/psicologo-expedientes.css'
+            ); ?>"
+        >
+
+    <?php endif; ?>
+
 </head>
 
 <body>
