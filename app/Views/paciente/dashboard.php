@@ -180,6 +180,10 @@ $canceladas = (int) ($resumenCitas['canceladas'] ?? 0);
 
 <section class="paciente-dashboard">
 
+    <?php
+        require __DIR__ . '/partials/aviso-perfil-incompleto.php';
+    ?>
+
     <header class="paciente-welcome">
 
         <div class="paciente-welcome-copy">

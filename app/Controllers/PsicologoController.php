@@ -23,6 +23,7 @@ use App\Services\ExpedienteClinicoService;
 use App\Services\NotificacionService;
 use App\Services\CorreoCitaService;
 use App\Services\PendienteClinicoService;
+use App\Services\PerfilPacienteService;
 use App\Services\ServicioOfertaService;
 use App\Services\SugerenciaServicioService;
 use App\Services\RedSocialService;
@@ -1281,6 +1282,16 @@ public function guardarCompletarInformacionPaciente(): void
             ?? 'Información del paciente actualizada correctamente.'
         )
     );
+
+    if ($clvPac !== '') {
+        $pacienteSync = (new Paciente())->obtenerPorClaveBasico($clvPac);
+        $clvUsuPac = trim((string) ($pacienteSync['ClvUsu'] ?? ''));
+
+        if ($pacienteSync !== null && $clvUsuPac !== '') {
+            (new PerfilPacienteService())
+                ->sincronizarAvisoPerfilIncompleto($clvPac, $clvUsuPac);
+        }
+    }
 
     $fechaNacimientoPost = trim((string) ($_POST['FechaNacimiento'] ?? ''));
     if ($fechaNacimientoPost !== '') {

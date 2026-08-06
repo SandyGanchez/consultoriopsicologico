@@ -152,6 +152,116 @@
     gap: 1.1rem;
 }
 
+.paciente-perfil-aviso {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    padding: 1.15rem 1.25rem;
+    border-radius: 14px;
+    border: 1px solid rgba(153, 205, 216, 0.45);
+    background: linear-gradient(135deg, #FDE8D3 0%, #DAEBE3 100%);
+    color: #657166;
+}
+
+.paciente-perfil-aviso-icon {
+    flex: 0 0 auto;
+    width: 2.4rem;
+    height: 2.4rem;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #657166;
+    font-size: 1.25rem;
+}
+
+.paciente-perfil-aviso-body h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #657166;
+}
+
+.paciente-perfil-aviso-body p {
+    margin: 0 0 0.65rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.paciente-perfil-aviso-secciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    list-style: none;
+    margin: 0 0 0.85rem;
+    padding: 0;
+}
+
+.paciente-perfil-aviso-secciones li {
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(101, 113, 102, 0.12);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.paciente-perfil-aviso-nota {
+    margin: 0 0 0.85rem !important;
+    font-size: 0.88rem !important;
+}
+
+.paciente-perfil-aviso-nota a,
+.paciente-profile-card-help a {
+    color: #657166;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.paciente-perfil-aviso-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.paciente-perfil-aviso-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0.55rem 1.15rem;
+    border-radius: 12px;
+    background: #657166;
+    color: #FFFFFF;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.paciente-perfil-aviso-btn:hover,
+.paciente-perfil-aviso-btn:focus-visible {
+    background: #556057;
+    color: #FFFFFF;
+    outline: 2px solid #99CDD8;
+    outline-offset: 2px;
+}
+
+.paciente-profile-card.is-pending {
+    border-color: rgba(243, 195, 178, 0.85);
+    box-shadow: 0 0 0 1px rgba(253, 232, 211, 0.9);
+    background: linear-gradient(180deg, #FFFCF8 0%, #FFFFFF 40%);
+}
+
+@media (max-width: 575.98px) {
+    .paciente-perfil-aviso {
+        flex-direction: column;
+    }
+
+    .paciente-perfil-aviso-btn {
+        width: 100%;
+    }
+}
+
 .paciente-profile-card {
     background: var(--pp-white);
     border: 1px solid rgba(207, 214, 196, 0.7);

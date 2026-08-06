@@ -343,4 +343,59 @@ class Notificacion extends Model
 
         return (int) $stmt->fetchColumn();
     }
+
+    /**
+     * Ciclo activo de perfil incompleto: título exacto (leída o no).
+     * La lectura manual no cierra el ciclo.
+     */
+    public function existePorUsuarioTipoYTitulo(
+        string $clvUsu,
+        string $tipo,
+        string $titulo
+    ): bool {
+        $sql = "SELECT 1
+                FROM notificacion
+                WHERE ClvUsu = :usuario
+                  AND TipoNotif = :tipo
+                  AND TituloNotif = :titulo
+                LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':usuario' => trim($clvUsu),
+            ':tipo' => strtoupper(trim($tipo)),
+            ':titulo' => trim($titulo)
+        ]);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Cierra el ciclo: renombra título y marca leída (sin borrar historial).
+     */
+    public function resolverCicloPerfilIncompleto(
+        string $clvUsu,
+        string $tituloActivo,
+        string $tituloResuelto,
+        string $tipo
+    ): int {
+        $sql = "UPDATE notificacion
+                SET
+                    TituloNotif = :tituloResuelto,
+                    LeidaNotif = 1,
+                    FechaLecturaNotif = COALESCE(FechaLecturaNotif, NOW())
+                WHERE ClvUsu = :usuario
+                  AND TipoNotif = :tipo
+                  AND TituloNotif = :tituloActivo";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':tituloResuelto' => trim($tituloResuelto),
+            ':usuario' => trim($clvUsu),
+            ':tipo' => strtoupper(trim($tipo)),
+            ':tituloActivo' => trim($tituloActivo)
+        ]);
+
+        return (int) $stmt->rowCount();
+    }
 }

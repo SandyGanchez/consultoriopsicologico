@@ -158,6 +158,10 @@ if ($tieneDireccion) {
         </div>
     <?php endif; ?>
 
+    <?php
+        require __DIR__ . '/partials/aviso-perfil-incompleto.php';
+    ?>
+
     <article class="paciente-profile-hero">
         <div class="paciente-profile-hero-band" aria-hidden="true"></div>
 
