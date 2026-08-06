@@ -198,7 +198,16 @@ class CorreoCita extends Model
     public function listarConfirmacionesPendientesPorCita(string $clvCita): array
     {
         $stmt = $this->db->prepare(
-            "SELECT *
+            "SELECT
+                IdCorreoCita,
+                ClvCita,
+                ClvUsuDestino,
+                TipoCorreo,
+                RolDestinatario,
+                FechaProgramada,
+                EstadoCorreo,
+                Intentos,
+                MotivoOmision
              FROM correo_cita
              WHERE ClvCita = :clvCita
                AND TipoCorreo = 'CONFIRMACION'
@@ -208,5 +217,62 @@ class CorreoCita extends Model
         $stmt->execute(['clvCita' => $clvCita]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Reactiva recordatorios omitidos por alta con poca anticipación
+     * cuando la cita sigue PROGRAMADA y aún no inicia.
+     */
+    public function reactivarRecordatoriosOmitidosMenosHoras(
+        string $motivoOmision,
+        int $horasVentana
+    ): int {
+        $horasVentana = max(1, min(168, $horasVentana));
+
+        $sql = "UPDATE correo_cita cc
+                INNER JOIN cita c ON c.ClvCita = cc.ClvCita
+                SET
+                    cc.EstadoCorreo = 'PENDIENTE',
+                    cc.MotivoOmision = NULL,
+                    cc.FechaProgramada = LEAST(
+                        NOW(),
+                        TIMESTAMP(c.FechaCita, c.HraInicioCita)
+                    ),
+                    cc.ErrorResumen = NULL
+                WHERE cc.TipoCorreo = 'RECORDATORIO_24H'
+                  AND cc.EstadoCorreo = 'OMITIDO'
+                  AND cc.MotivoOmision = :motivo
+                  AND cc.ClvUsuDestino <> ''
+                  AND cc.RolDestinatario IN ('PACIENTE', 'PSICOLOGO')
+                  AND c.EstadoCita = 'PROGRAMADA'
+                  AND TIMESTAMP(c.FechaCita, c.HraInicioCita) > NOW()
+                  AND TIMESTAMP(c.FechaCita, c.HraInicioCita)
+                      <= (NOW() + INTERVAL {$horasVentana} HOUR)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['motivo' => $motivoOmision]);
+
+        return (int) $stmt->rowCount();
+    }
+
+    public function contarPorCitaTipoRol(
+        string $clvCita,
+        string $tipo,
+        string $rol
+    ): int {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*)
+             FROM correo_cita
+             WHERE ClvCita = :cita
+               AND TipoCorreo = :tipo
+               AND RolDestinatario = :rol"
+        );
+        $stmt->execute([
+            'cita' => trim($clvCita),
+            'tipo' => strtoupper(trim($tipo)),
+            'rol' => strtoupper(trim($rol))
+        ]);
+
+        return (int) $stmt->fetchColumn();
     }
 }

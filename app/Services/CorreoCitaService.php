@@ -13,8 +13,9 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Confirmaciones y recordatorios de cita por correo.
- * Idempotencia vía tabla correo_cita (no usa notificacion).
+ * Confirmaciones y recordatorios de cita por correo + campana (Fase 3D).
+ * Idempotencia: UNIQUE correo_cita (ClvCita, TipoCorreo, RolDestinatario).
+ * Campana RECORDATORIO solo en el primer claim del ledger (Intentos = 0).
  */
 class CorreoCitaService
 {
@@ -29,15 +30,19 @@ class CorreoCitaService
     private PDO $db;
     private CorreoCita $model;
     private MailService $mailService;
+    private RecordatorioCitaService $recordatorioService;
 
     public function __construct(
         ?PDO $db = null,
         ?CorreoCita $model = null,
-        ?MailService $mailService = null
+        ?MailService $mailService = null,
+        ?RecordatorioCitaService $recordatorioService = null
     ) {
         $this->db = $db ?? Database::connect();
         $this->model = $model ?? new CorreoCita();
         $this->mailService = $mailService ?? new MailService();
+        $this->recordatorioService = $recordatorioService
+            ?? new RecordatorioCitaService();
     }
 
     public function persistenciaDisponible(): bool
@@ -132,30 +137,33 @@ class CorreoCitaService
             'EstadoCorreo' => 'PENDIENTE'
         ]);
 
-        $programadaRecordatorio = $inicio->modify('-24 hours');
-        $creadaConMenosDe24h = $ahora >= $programadaRecordatorio;
+        // Ventana: ahora >= inicio - horas y ahora < inicio → programar ya.
+        // Citas creadas con poca anticipación también quedan PENDIENTE.
+        $fechaProgRecordatorio = $this->recordatorioService
+            ->fechaProgramadaRecordatorio($inicio, $ahora);
 
         foreach (['PACIENTE' => $clvUsuPac, 'PSICOLOGO' => $clvUsuPsi] as $rol => $clvUsu) {
-            if ($creadaConMenosDe24h) {
+            if ($fechaProgRecordatorio === null) {
                 $this->model->insertarIdempotente([
                     'ClvCita' => $clvCita,
                     'ClvUsuDestino' => $clvUsu,
-                    'TipoCorreo' => 'RECORDATORIO_24H',
+                    'TipoCorreo' => RecordatorioCitaService::TIPO_CORREO,
                     'RolDestinatario' => $rol,
-                    'FechaProgramada' => $programadaRecordatorio->format('Y-m-d H:i:s'),
+                    'FechaProgramada' => $ahora->format('Y-m-d H:i:s'),
                     'EstadoCorreo' => 'OMITIDO',
-                    'MotivoOmision' => self::MOTIVO_MENOS_24H
+                    'MotivoOmision' => RecordatorioCitaService::MOTIVO_CITA_INICIADA
                 ]);
-            } else {
-                $this->model->insertarIdempotente([
-                    'ClvCita' => $clvCita,
-                    'ClvUsuDestino' => $clvUsu,
-                    'TipoCorreo' => 'RECORDATORIO_24H',
-                    'RolDestinatario' => $rol,
-                    'FechaProgramada' => $programadaRecordatorio->format('Y-m-d H:i:s'),
-                    'EstadoCorreo' => 'PENDIENTE'
-                ]);
+                continue;
             }
+
+            $this->model->insertarIdempotente([
+                'ClvCita' => $clvCita,
+                'ClvUsuDestino' => $clvUsu,
+                'TipoCorreo' => RecordatorioCitaService::TIPO_CORREO,
+                'RolDestinatario' => $rol,
+                'FechaProgramada' => $fechaProgRecordatorio->format('Y-m-d H:i:s'),
+                'EstadoCorreo' => 'PENDIENTE'
+            ]);
         }
     }
 
@@ -201,12 +209,20 @@ class CorreoCitaService
     /**
      * Lote para CLI.
      *
-     * @return array{recuperados: int, procesados: int, enviados: int, fallidos: int, omitidos: int}
+     * @return array{
+     *   recuperados: int,
+     *   reactivados: int,
+     *   procesados: int,
+     *   enviados: int,
+     *   fallidos: int,
+     *   omitidos: int
+     * }
      */
     public function procesarLote(int $limite = 40): array
     {
         $resumen = [
             'recuperados' => 0,
+            'reactivados' => 0,
             'procesados' => 0,
             'enviados' => 0,
             'fallidos' => 0,
@@ -220,6 +236,13 @@ class CorreoCitaService
         $resumen['recuperados'] = $this->model->recuperarProcesandoAbandonados(
             self::MINUTOS_PROCESANDO_ABANDONADO
         );
+
+        // Compatibilidad: filas antiguas OMITIDO por <24h vuelven a cola.
+        $resumen['reactivados'] = $this->model
+            ->reactivarRecordatoriosOmitidosMenosHoras(
+                self::MOTIVO_MENOS_24H,
+                $this->recordatorioService->horasRecordatorio()
+            );
 
         $filas = $this->model->listarPendientesProcesables(
             $limite,
@@ -263,6 +286,10 @@ class CorreoCitaService
         }
 
         $propia = !$this->db->inTransaction();
+        $fila = null;
+        $tipo = '';
+        $clvCita = '';
+        $contexto = null;
 
         try {
             if ($propia) {
@@ -296,8 +323,9 @@ class CorreoCitaService
 
             $tipo = (string) ($fila['TipoCorreo'] ?? '');
             $clvCita = (string) ($fila['ClvCita'] ?? '');
+            $intentosAntes = $intentos;
 
-            if ($tipo === 'RECORDATORIO_24H') {
+            if ($tipo === RecordatorioCitaService::TIPO_CORREO) {
                 $estadoCita = $this->obtenerEstadoCita($clvCita);
                 if ($estadoCita !== 'PROGRAMADA') {
                     $this->model->marcarOmitido(
@@ -309,6 +337,39 @@ class CorreoCitaService
                     }
                     return true;
                 }
+
+                $contexto = $this->obtenerContextoCita($clvCita);
+                if ($contexto === null) {
+                    if ($propia) {
+                        $this->db->rollBack();
+                    }
+                    return false;
+                }
+
+                $inicio = $this->fechaHoraInicio($contexto);
+                if ($inicio === null || $this->ahora() >= $inicio) {
+                    $this->model->marcarOmitido(
+                        $id,
+                        RecordatorioCitaService::MOTIVO_CITA_INICIADA
+                    );
+                    if ($propia) {
+                        $this->db->commit();
+                    }
+                    return true;
+                }
+
+                // Ventana: ahora >= inicio - horas AND ahora < inicio.
+                if (
+                    !$this->recordatorioService->estaEnVentanaRecordatorio(
+                        $inicio,
+                        $this->ahora()
+                    )
+                ) {
+                    if ($propia) {
+                        $this->db->commit();
+                    }
+                    return false;
+                }
             }
 
             if (!$this->model->marcarProcesando($id)) {
@@ -316,6 +377,25 @@ class CorreoCitaService
                     $this->db->rollBack();
                 }
                 return false;
+            }
+
+            // Campana: solo primer claim (Intentos bloqueado antes del +1).
+            // Falla → excepción → ROLLBACK (sin claim parcial).
+            if (
+                $tipo === RecordatorioCitaService::TIPO_CORREO
+                && $intentosAntes === 0
+            ) {
+                if (
+                    !is_array($contexto)
+                    || !$this->recordatorioService->crearNotificacionCampana(
+                        $fila,
+                        $contexto
+                    )
+                ) {
+                    throw new RuntimeException(
+                        'No fue posible crear la notificación de recordatorio.'
+                    );
+                }
             }
 
             if ($propia) {
@@ -328,9 +408,9 @@ class CorreoCitaService
             return false;
         }
 
-        // Fuera de transacción: SMTP.
+        // Fuera de transacción: SMTP (nunca dentro del BEGIN anterior).
         try {
-            $contexto = $this->obtenerContextoCita($clvCita);
+            $contexto = $contexto ?? $this->obtenerContextoCita($clvCita);
             if ($contexto === null) {
                 throw new RuntimeException('Contexto de cita no disponible.');
             }
