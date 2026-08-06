@@ -419,23 +419,52 @@
 }
 
 .paciente-status.is-programada {
-    background: #DAEBE3;
-    color: #657166;
+    background: #99CDD8;
+    color: #39423B;
 }
 
 .paciente-status.is-asistida {
     background: #CFD6C4;
-    color: #657166;
+    color: #39423B;
 }
 
 .paciente-status.is-cancelada {
     background: #F3C3B2;
-    color: #657166;
+    color: #6B2E2E;
 }
 
 .paciente-status.is-inasistencia {
-    background: #FDE8D3;
+    background: #657166;
+    color: #FFFFFF;
+}
+
+.paciente-history-date-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+    margin: 0 0 1.25rem;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    background: #F7F9F8;
+    border: 1px solid #CFD6C4;
+}
+
+.paciente-history-date-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
     color: #657166;
+    font-weight: 600;
+}
+
+.paciente-history-date-filters input[type="date"] {
+    border: 1px solid #CFD6C4;
+    border-radius: 10px;
+    padding: 0.4rem 0.55rem;
+    color: #39423B;
+    background: #FFFFFF;
 }
 
 /*---------- Empty ----------*/

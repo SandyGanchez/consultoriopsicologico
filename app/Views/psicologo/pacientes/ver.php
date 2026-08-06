@@ -132,7 +132,7 @@ if (
         <?php
         $tipo = 'asistencia';
         $titulo = 'Registrar asistencia';
-        $mensaje = 'La cita ya comenzó. Registra si el paciente asistió para continuar con la documentación clínica.';
+        $mensaje = 'Esta cita está pendiente de registrar asistencia.';
         $etiquetaBoton = 'Registrar asistencia';
         $urlBoton = 'psicologo/agenda';
         $etiquetaSecundaria = 'Completar datos faltantes';
@@ -489,11 +489,62 @@ if (
 
         <h2>Historial de citas contigo</h2>
 
+        <?php
+            $filtroEstadoCitas = strtoupper((string) ($filtroEstadoCitas ?? 'TODAS'));
+            $conteosEstadoCitas = is_array($conteosEstadoCitas ?? null)
+                ? $conteosEstadoCitas
+                : [];
+            $paginaCitas = max(1, (int) ($paginaCitas ?? 1));
+            $totalPaginasCitas = max(1, (int) ($totalPaginasCitas ?? 1));
+            $filtrosCitas = [
+                'TODAS' => 'Todas',
+                'PROGRAMADA' => 'Programadas',
+                'ASISTIDA' => 'Asistidas',
+                'CANCELADA' => 'Canceladas',
+                'INASISTENCIA' => 'Inasistencias'
+            ];
+            $urlFiltroCitas = static function (
+                string $estado,
+                int $pagina = 1
+            ) use ($clvPac): string {
+                $params = [];
+                if ($estado !== 'TODAS') {
+                    $params['estado'] = $estado;
+                }
+                if ($pagina > 1) {
+                    $params['pagina'] = $pagina;
+                }
+                $query = http_build_query($params);
+                return Helper::baseUrl(
+                    'psicologo/pacientes/ver/' . rawurlencode($clvPac)
+                    . ($query !== '' ? '?' . $query : '')
+                    . ($query !== '' ? '#historial-citas' : '#historial-citas')
+                );
+            };
+        ?>
+
+        <nav
+            class="psychologist-patient-history-filters"
+            aria-label="Filtrar historial de citas por estado"
+        >
+            <?php foreach ($filtrosCitas as $valor => $etiqueta): ?>
+                <?php $activo = $filtroEstadoCitas === $valor; ?>
+                <a
+                    href="<?= htmlspecialchars($urlFiltroCitas($valor, 1), ENT_QUOTES, 'UTF-8'); ?>"
+                    class="<?= $activo ? 'is-active' : ''; ?>"
+                    <?= $activo ? 'aria-current="page"' : ''; ?>
+                >
+                    <?= htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8'); ?>
+                    (<?= (int) ($conteosEstadoCitas[$valor] ?? 0); ?>)
+                </a>
+            <?php endforeach; ?>
+        </nav>
+
         <?php if ($citas === []): ?>
 
             <div class="psychologist-patients-empty psychologist-patients-empty--compact">
 
-                <p>No hay citas registradas con este paciente.</p>
+                <p>No hay citas registradas con este paciente para este filtro.</p>
 
             </div>
 
@@ -510,6 +561,7 @@ if (
                             <th>Hora</th>
                             <th>Duración</th>
                             <th>Estado</th>
+                            <th>Nota operativa</th>
                         </tr>
                     </thead>
 
@@ -568,6 +620,15 @@ if (
                                         ); ?>
                                     </span>
                                 </td>
+                                <td>
+                                    <p class="psychologist-patient-history-note">
+                                        <?= htmlspecialchars(
+                                            (string) ($cita['notaOperativa'] ?? ''),
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ); ?>
+                                    </p>
+                                </td>
                             </tr>
 
                         <?php endforeach; ?>
@@ -577,6 +638,22 @@ if (
                 </table>
 
             </div>
+
+            <?php if ($totalPaginasCitas > 1): ?>
+                <nav class="psychologist-patient-history-filters" aria-label="Paginación de citas">
+                    <?php if ($paginaCitas > 1): ?>
+                        <a href="<?= htmlspecialchars($urlFiltroCitas($filtroEstadoCitas, $paginaCitas - 1), ENT_QUOTES, 'UTF-8'); ?>">
+                            Anterior
+                        </a>
+                    <?php endif; ?>
+                    <span>Página <?= (int) $paginaCitas; ?> de <?= (int) $totalPaginasCitas; ?></span>
+                    <?php if ($paginaCitas < $totalPaginasCitas): ?>
+                        <a href="<?= htmlspecialchars($urlFiltroCitas($filtroEstadoCitas, $paginaCitas + 1), ENT_QUOTES, 'UTF-8'); ?>">
+                            Siguiente
+                        </a>
+                    <?php endif; ?>
+                </nav>
+            <?php endif; ?>
 
         <?php endif; ?>
 

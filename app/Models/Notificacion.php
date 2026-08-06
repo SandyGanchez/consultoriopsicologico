@@ -315,4 +315,32 @@ class Notificacion extends Model
 
         return $stmt->rowCount() > 0;
     }
+
+    /**
+     * Cuenta notificaciones recientes por título/tipo/destino (pruebas).
+     */
+    public function contarPorUsuarioTipoYTitulo(
+        string $clvUsu,
+        string $tipo,
+        string $titulo,
+        int $minutos = 10
+    ): int {
+        $minutos = max(1, min(120, $minutos));
+
+        $sql = "SELECT COUNT(*)
+                FROM notificacion
+                WHERE ClvUsu = :usuario
+                  AND TipoNotif = :tipo
+                  AND TituloNotif = :titulo
+                  AND FechaNotif >= DATE_SUB(NOW(), INTERVAL :mins MINUTE)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':usuario', trim($clvUsu));
+        $stmt->bindValue(':tipo', strtoupper(trim($tipo)));
+        $stmt->bindValue(':titulo', trim($titulo));
+        $stmt->bindValue(':mins', $minutos, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return (int) $stmt->fetchColumn();
+    }
 }

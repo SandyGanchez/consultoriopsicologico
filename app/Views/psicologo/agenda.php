@@ -119,31 +119,52 @@ $csrf = Session::csrfToken();
 
     </form>
 
-    <div class="psicologo-agenda-legend">
+    <?php
+    $citasPendientesAsistencia = is_array($citasPendientesAsistencia ?? null)
+        ? $citasPendientesAsistencia
+        : [];
+    ?>
 
-        <span>Estados:</span>
+    <?php if ($citasPendientesAsistencia !== []): ?>
+        <div
+            class="psicologo-agenda-pending-banner"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <div>
+                <strong>Asistencia pendiente</strong>
+                <p>
+                    Hay
+                    <?= (int) count($citasPendientesAsistencia); ?>
+                    cita(s) cuya hora ya comenzó y siguen programadas.
+                    Esta cita está pendiente de registrar asistencia.
+                </p>
+            </div>
+        </div>
+    <?php endif; ?>
 
-        <span class="psicologo-agenda-legend-item">
-            <i class="agenda-dot programada"></i>
-            Programada
-        </span>
-
-        <span class="psicologo-agenda-legend-item">
-            <i class="agenda-dot asistida"></i>
-            Asistida
-        </span>
-
-        <span class="psicologo-agenda-legend-item">
-            <i class="agenda-dot cancelada"></i>
-            Cancelada
-        </span>
-
-        <span class="psicologo-agenda-legend-item">
-            <i class="agenda-dot inasistencia"></i>
-            Inasistencia
-        </span>
-
-    </div>
+    <ul
+        class="psicologo-agenda-legend"
+        aria-label="Leyenda de estados de cita"
+    >
+        <li class="psicologo-agenda-legend-item">
+            <span class="agenda-dot programada" aria-hidden="true"></span>
+            <span>Programada</span>
+        </li>
+        <li class="psicologo-agenda-legend-item">
+            <span class="agenda-dot asistida" aria-hidden="true"></span>
+            <span>Asistida</span>
+        </li>
+        <li class="psicologo-agenda-legend-item">
+            <span class="agenda-dot cancelada" aria-hidden="true"></span>
+            <span>Cancelada</span>
+        </li>
+        <li class="psicologo-agenda-legend-item">
+            <span class="agenda-dot inasistencia" aria-hidden="true"></span>
+            <span>Inasistencia</span>
+        </li>
+    </ul>
 
     <div class="psicologo-agenda-panel">
 
@@ -222,6 +243,11 @@ $csrf = Session::csrfToken();
                                 —
                             </span>
                         </dd>
+                    </div>
+
+                    <div class="psicologo-agenda-details__full">
+                        <dt>Nota operativa</dt>
+                        <dd id="detalleNotaOperativaPsi">—</dd>
                     </div>
 
                 </dl>
