@@ -64,6 +64,25 @@ $perfilIncompleto = (bool) ($perfilIncompleto ?? false);
 
     <?php endif; ?>
 
+    <?php if (!empty($alertaCompatibilidad['mensaje'])): ?>
+        <div
+            class="alert alert-warning mb-4"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+            <?= htmlspecialchars(
+                (string) $alertaCompatibilidad['mensaje']
+            ); ?>
+            <a
+                class="alert-link ms-1"
+                href="<?= Helper::baseUrl('psicologo/disponibilidad'); ?>"
+            >
+                Ajustar disponibilidad
+            </a>
+        </div>
+    <?php endif; ?>
+
     <?php
     $citasRegistrarAsistencia = is_array($citasRegistrarAsistencia ?? null)
         ? $citasRegistrarAsistencia

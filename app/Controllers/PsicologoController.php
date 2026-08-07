@@ -17,6 +17,7 @@ use App\Helpers\Helper;
 use App\Services\ActivacionCuentaService;
 use App\Services\AgendaService;
 use App\Services\ClaveService;
+use App\Services\CompatibilidadAgendaService;
 use App\Services\CompletarInformacionPacienteService;
 use App\Services\CuentaService;
 use App\Services\ExpedienteClinicoService;
@@ -131,6 +132,28 @@ public function dashboard(): void
         $clvCons
     );
 
+    $alertaCompatibilidad = null;
+    try {
+        $compat = new CompatibilidadAgendaService();
+        $bloquesDisp = (new DisponibilidadPsicologo())->obtenerPorPsicologo(
+            (string) $clvPsi
+        );
+        $horariosCons = (new HorarioConsultorio())->obtenerPorConsultorio(
+            $clvCons
+        );
+        $resumen = $compat->resumirCompatibilidadServicios(
+            (string) $clvPsi,
+            $clvCons,
+            $bloquesDisp,
+            $horariosCons
+        );
+        if (!empty($resumen['alertaGlobal'])) {
+            $alertaCompatibilidad = $resumen['alertaGlobal'];
+        }
+    } catch (\Throwable $e) {
+        $alertaCompatibilidad = null;
+    }
+
     $this->view(
     'psicologo/dashboard',
     [
@@ -167,7 +190,8 @@ public function dashboard(): void
 
         'citasRegistrarAsistencia' => $pendientes['registrarAsistencia'],
         'historiasPendientes' => $pendientes['historiasPendientes'],
-        'seguimientosPendientes' => $pendientes['seguimientosPendientes']
+        'seguimientosPendientes' => $pendientes['seguimientosPendientes'],
+        'alertaCompatibilidad' => $alertaCompatibilidad
     ],
     'psicologo'
 );
@@ -331,6 +355,26 @@ public function servicios(): void
     $misServicios = $asignacionModel->listarPorPsicologo($clvPsi);
     $sugerenciaService = new SugerenciaServicioService();
 
+    $alertaCompatibilidad = null;
+    try {
+        $compat = new CompatibilidadAgendaService();
+        $bloquesDisp = (new DisponibilidadPsicologo())->obtenerPorPsicologo(
+            $clvPsi
+        );
+        $horariosCons = (new HorarioConsultorio())->obtenerPorConsultorio(
+            $clvCons
+        );
+        $resumen = $compat->resumirCompatibilidadServicios(
+            $clvPsi,
+            $clvCons,
+            $bloquesDisp,
+            $horariosCons
+        );
+        $alertaCompatibilidad = $resumen['alertaGlobal'] ?? null;
+    } catch (\Throwable $e) {
+        $alertaCompatibilidad = null;
+    }
+
     $this->view(
         'psicologo/servicios/index',
         [
@@ -342,6 +386,7 @@ public function servicios(): void
             'catalogoDisponible' => [],
             'sugerencias' => $sugerenciaService->listarParaPsicologo($clvPsi),
             'sugerenciasHabilitadas' => $sugerenciaService->persistenciaDisponible(),
+            'alertaCompatibilidad' => $alertaCompatibilidad,
             'cargarServiciosPsicologoCss' => true
         ],
         'psicologo'
@@ -514,8 +559,21 @@ public function actualizarServicio(): void
             );
         }
 
+        $nuevaDuracion = (int) $datosEntrada['DuracionMinutos'];
+        $advertencia = (new CompatibilidadAgendaService())
+            ->advertenciaCambioDuracion(
+                $clvPsi,
+                $clvCons,
+                $nuevaDuracion,
+                (string) ($asignacion['NombreServicio'] ?? 'este servicio')
+            );
+
         $_SESSION['success'] =
             'Precio y duración actualizados correctamente.';
+
+        if (!empty($advertencia['sinBloqueCompatible'])) {
+            $_SESSION['warning'] = (string) $advertencia['mensaje'];
+        }
 
         Response::redirect('psicologo/servicios');
     } catch (\Throwable $e) {
@@ -1487,7 +1545,11 @@ public function eventosAgenda(): void
                     'ClvCons' => $clvCons,
                     'EstadoCita' => $estadoCita,
                     'FechaCita' => (string) ($cita['FechaCita'] ?? ''),
-                    'HraInicioCita' => (string) ($cita['HraInicioCita'] ?? '')
+                    'HraInicioCita' => (string) ($cita['HraInicioCita'] ?? ''),
+                    'HraFinCita' => (string) ($cita['HraFinCita'] ?? ''),
+                    'DuracionAplicadaMin' => (int) (
+                        $cita['DuracionAplicadaMin'] ?? 0
+                    )
                 ],
                 $clvPsi,
                 $clvCons,
@@ -1495,6 +1557,11 @@ public function eventosAgenda(): void
             );
 
             $puedeRegistrarResultado = !empty($eval['puedeRegistrarAsistencia']);
+            $puedeMarcarAsistida = !empty($eval['puedeMarcarAsistida']);
+            $puedeMarcarInasistencia = !empty($eval['puedeMarcarInasistencia']);
+            $motivoBloqueoAsistencia = (string) (
+                $eval['motivoBloqueoAsistencia'] ?? ''
+            );
             $urlClinica = $pendienteService->urlPublica($eval['rutaAccion']);
             $urlVerPaciente = $pendienteService->urlPublica(
                 (string) ($eval['rutasSecundarias']['verPaciente'] ?? '')
@@ -1545,6 +1612,12 @@ public function eventosAgenda(): void
                             $cita['CostoAplicado'] ?? 0
                         ),
                     'puedeRegistrarResultado' => $puedeRegistrarResultado,
+                    'puedeMarcarAsistida' => $puedeMarcarAsistida,
+                    'puedeMarcarInasistencia' => $puedeMarcarInasistencia,
+                    'motivoBloqueoAsistencia' => $motivoBloqueoAsistencia,
+                    'horaInicioLegible' => (string) (
+                        $eval['horaInicioLegible'] ?? ''
+                    ),
                     'estadoClinico' => $eval['estado'],
                     'mensajeClinico' => $eval['mensaje'],
                     'accionClinica' => $mapaAccion,
@@ -1625,7 +1698,9 @@ public function registrarAsistenciaCita(): void
     if (!$resultado['ok']) {
         $codigoHttp = match ($resultado['codigo'] ?? '') {
             'CSRF_INVALIDO', 'SIN_AUTORIZACION' => 403,
-            'CITA_NO_INICIADA' => 409,
+            'CITA_NO_INICIADA',
+            'CITA_DURANTE_SESION',
+            'CITA_DIA_CERRADO' => 409,
             'TRANSICION_NO_PERMITIDA', 'ACCION_INVALIDA' => 409,
             default => 400
         };
@@ -1877,7 +1952,8 @@ public function guardarCitaAgenda(): void
             )
         ) {
             throw new RuntimeException(
-                'El horario seleccionado ya no está disponible.'
+                'Este horario acaba de dejar de estar disponible. '
+                . 'Selecciona otro espacio.'
             );
         }
 
@@ -3144,6 +3220,22 @@ private function flashConfiguracion(
                 $clvCons
             );
 
+        $compat = new CompatibilidadAgendaService();
+        $resumenCompatibilidad = $compat->resumirCompatibilidadServicios(
+            $clvPsi,
+            $clvCons,
+            $bloquesRegistrados,
+            $horariosConsultorio
+        );
+
+        $resumenPorBloque = [];
+        foreach ($resumenCompatibilidad['bloques'] as $fila) {
+            $clave = (string) ($fila['ClvDisponibilidad'] ?? '');
+            if ($clave !== '') {
+                $resumenPorBloque[$clave] = $fila;
+            }
+        }
+
         $bloquesPorDia = [];
         $horariosPorDia = [];
 
@@ -3185,15 +3277,23 @@ private function flashConfiguracion(
                 'consultorio' =>
                     $contexto['consultorio'],
                 'diasSemana' => $diasSemana,
+                'resumenPorBloque' => $resumenPorBloque,
+                'alertaCompatibilidad' =>
+                    $resumenCompatibilidad['alertaGlobal'] ?? null,
                 'errores' =>
                     Session::getFlash('errores') ?? [],
                 'success' =>
                     Session::getFlash('success'),
                 'error' =>
-                    Session::getFlash('error')
+                    Session::getFlash('error'),
+                'warning' =>
+                    Session::getFlash('warning')
+                    ?? ($_SESSION['warning'] ?? null)
             ],
             'psicologo'
         );
+
+        unset($_SESSION['warning']);
     }
 
     public function guardarDisponibilidad(): void
@@ -3364,6 +3464,29 @@ private function flashConfiguracion(
             $clvDisponibilidad
         );
 
+        if ($seraActiva && empty($errores)) {
+            $impacto = (new CompatibilidadAgendaService())
+                ->detectarCitasAfectadasPorCambio(
+                    $clvPsi,
+                    $clvCons,
+                    $registro,
+                    [
+                        'DiaSemana' => $diaSemana,
+                        'HoraInicio' => $this->normalizarHora($horaInicio),
+                        'HoraFin' => $this->normalizarHora($horaFin)
+                    ]
+                );
+
+            if (empty($impacto['ok'])) {
+                Session::setFlash(
+                    'error',
+                    (string) $impacto['mensaje']
+                );
+
+                Response::redirect('psicologo/disponibilidad');
+            }
+        }
+
         if (!empty($errores)) {
             Session::setFlash('errores', [
                 $clvDisponibilidad => $errores
@@ -3527,6 +3650,25 @@ private function flashConfiguracion(
                     'error',
                     'No es posible activar el bloque: '
                     . implode(' ', $errores)
+                );
+
+                Response::redirect('psicologo/disponibilidad');
+            }
+        }
+
+        if ($nuevoEstatus === 'INACTIVA') {
+            $impacto = (new CompatibilidadAgendaService())
+                ->detectarCitasAfectadasPorCambio(
+                    $clvPsi,
+                    $clvCons,
+                    $registro,
+                    null
+                );
+
+            if (empty($impacto['ok'])) {
+                Session::setFlash(
+                    'error',
+                    (string) $impacto['mensaje']
                 );
 
                 Response::redirect('psicologo/disponibilidad');

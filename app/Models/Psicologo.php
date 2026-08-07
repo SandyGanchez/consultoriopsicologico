@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Model;
+use App\Config\Paths;
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -29,6 +30,8 @@ class Psicologo extends Model
 
         $nombreFoto =
             $perfil['FotoPerfilPer'] ?? null;
+        $fotoAnterior = is_string($nombreFoto) ? $nombreFoto : null;
+        $fotoCambio = false;
 
         if (
             $foto !== null &&
@@ -37,6 +40,7 @@ class Psicologo extends Model
         ) {
             $nombreFoto =
                 $this->guardarFotoPerfil($foto);
+            $fotoCambio = true;
         }
 
         $sqlPersona = "UPDATE persona
@@ -84,6 +88,9 @@ class Psicologo extends Model
 
         $this->db->commit();
 
+        if ($fotoCambio && $fotoAnterior !== null) {
+            $this->eliminarFotoPerfilSiCorresponde($fotoAnterior);
+        }
     } catch (\Throwable $e) {
         if ($this->db->inTransaction()) {
             $this->db->rollBack();
@@ -92,6 +99,7 @@ class Psicologo extends Model
         throw $e;
     }
 }
+
 private function guardarFotoPerfil(
     array $foto
 ): string {
@@ -113,9 +121,9 @@ private function guardarFotoPerfil(
         );
     }
 
-    if ((int) $foto['size'] > 3 * 1024 * 1024) {
+    if ((int) $foto['size'] > 2 * 1024 * 1024) {
         throw new RuntimeException(
-            'La fotografía no debe superar 3 MB.'
+            'La fotografía no debe superar 2 MB.'
         );
     }
 
@@ -147,18 +155,13 @@ private function guardarFotoPerfil(
 
     $nombreArchivo =
         'perfil_' .
-        bin2hex(random_bytes(12)) .
+        bin2hex(random_bytes(16)) .
         '.' .
         $extension;
 
     $directorio =
-        dirname(__DIR__, 2) .
-        DIRECTORY_SEPARATOR .
-        'public' .
-        DIRECTORY_SEPARATOR .
-        'uploads' .
-        DIRECTORY_SEPARATOR .
-        'perfiles';
+        Paths::publicPath() .
+        '/uploads/perfiles';
 
     if (
         !is_dir($directorio) &&
@@ -186,7 +189,52 @@ private function guardarFotoPerfil(
         );
     }
 
+    if (!is_file($rutaDestino)) {
+        throw new RuntimeException(
+            'La fotografía no quedó almacenada correctamente.'
+        );
+    }
+
     return $nombreArchivo;
+}
+
+private function eliminarFotoPerfilSiCorresponde(string $nombre): void
+{
+    $nombre = basename(trim($nombre));
+
+    $protegidas = [
+        '',
+        'default.png',
+        'perfil-default.png'
+    ];
+
+    if (in_array($nombre, $protegidas, true)) {
+        return;
+    }
+
+    if (
+        $nombre === ''
+        || str_contains($nombre, '..')
+        || !preg_match('/^perfil_[a-f0-9]{24,64}\.(jpg|jpeg|png|webp)$/i', $nombre)
+    ) {
+        return;
+    }
+
+    $directorio = Paths::publicPath() . '/uploads/perfiles';
+    $ruta = $directorio . DIRECTORY_SEPARATOR . $nombre;
+    $realDir = realpath($directorio);
+    $realArchivo = realpath($ruta);
+
+    if (
+        $realDir === false
+        || $realArchivo === false
+        || !str_starts_with($realArchivo, $realDir)
+        || !is_file($realArchivo)
+    ) {
+        return;
+    }
+
+    @unlink($realArchivo);
 }
     public function listarPorConsultorio(
         string $clvCons

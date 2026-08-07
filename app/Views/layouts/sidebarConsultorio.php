@@ -120,6 +120,16 @@ $activo = static function (bool $cond): string {
         </a>
 
         <a
+            href="<?= Helper::baseUrl('consultorio/pacientes'); ?>"
+            class="consultorio-menu-link<?= $activo(
+                str_contains((string) $rutaActual, '/consultorio/pacientes')
+            ); ?>"
+        >
+            <i class="bi bi-people-fill" aria-hidden="true"></i>
+            <span>Pacientes</span>
+        </a>
+
+        <a
             href="<?= Helper::baseUrl('consultorio/servicios'); ?>"
             class="consultorio-menu-link<?= $activo(
                 str_contains((string) $rutaActual, '/consultorio/servicios')

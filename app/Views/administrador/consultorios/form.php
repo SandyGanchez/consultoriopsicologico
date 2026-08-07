@@ -33,24 +33,25 @@ $error = static function (string $campo) use ($errores): void {
 };
 
 $genero = (string) ($datos['generoResponsable'] ?? '');
+$modoEdicion = !empty($modoEdicion);
 ?>
 
 <div class="container py-4">
 
     <div class="mb-4">
         <a
-            href="<?= Helper::baseUrl('administrador'); ?>"
+            href="<?= Helper::baseUrl($modoEdicion ? 'administrador/consultorio' : 'administrador'); ?>"
             class="text-decoration-none"
         >
-            ← Regresar al panel
+            ← Regresar
         </a>
     </div>
 
-    <h1 class="h3 mb-1">Configurar consultorio</h1>
+    <h1 class="h3 mb-1"><?= $modoEdicion ? 'Editar consultorio' : 'Configurar consultorio'; ?></h1>
     <p class="text-muted mb-4">
-        Alta única de la cuenta del consultorio de esta instalación.
-        El responsable completará la configuración comercial y operativa
-        tras activar su acceso.
+        <?= $modoEdicion
+            ? 'Actualiza únicamente datos administrativos autorizados. No se modifican roles, contraseñas ni información clínica.'
+            : 'Alta única de la cuenta del consultorio de esta instalación. El responsable completará la configuración comercial y operativa tras activar su acceso.'; ?>
     </p>
 
     <?php if (!empty($errores['general'])): ?>
@@ -61,7 +62,11 @@ $genero = (string) ($datos['generoResponsable'] ?? '');
 
     <form
         method="POST"
-        action="<?= Helper::baseUrl('administrador/consultorio/guardar'); ?>"
+        action="<?= Helper::baseUrl(
+            $modoEdicion
+                ? 'administrador/consultorio/actualizar'
+                : 'administrador/consultorio/guardar'
+        ); ?>"
         novalidate
         id="formConsultorioAdmin"
     >

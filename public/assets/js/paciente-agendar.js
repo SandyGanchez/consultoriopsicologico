@@ -879,6 +879,12 @@
         slotsContainer.innerHTML = '';
         ocultarEstadoHorarios();
 
+        var ayuda = document.createElement('p');
+        ayuda.className = 'small text-muted mb-2';
+        ayuda.textContent =
+            'Los horarios mostrados son opciones de inicio. Cuando una cita se reserva, las opciones que se superponen dejan de estar disponibles.';
+        slotsContainer.appendChild(ayuda);
+
         espacios.forEach(function (espacio) {
             var boton = document.createElement('button');
             boton.type = 'button';

@@ -123,7 +123,6 @@ $correo = (string) ($consultorio['CorreoUsu'] ?? '');
                         <dt class="col-sm-4">Estatus institucional</dt>
                         <dd class="col-sm-8">
                             <?= $esc($estatusInst); ?>
-                            <div class="small text-muted">Informativo. No se modifica con Activar/Inactivar cuenta.</div>
                         </dd>
 
                         <dt class="col-sm-4">Página pública</dt>
@@ -139,9 +138,16 @@ $correo = (string) ($consultorio['CorreoUsu'] ?? '');
         <div class="col-lg-5">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3">
-                    <h2 class="h5 mb-0">Acciones de cuenta</h2>
+                    <h2 class="h5 mb-0">Acciones administrativas</h2>
                 </div>
                 <div class="card-body d-grid gap-2">
+
+                    <a
+                        href="<?= Helper::baseUrl('administrador/consultorio/editar'); ?>"
+                        class="btn btn-outline-secondary w-100"
+                    >
+                        Editar datos administrativos
+                    </a>
 
                     <?php if ($cuentaActiva): ?>
                         <form
@@ -165,6 +171,26 @@ $correo = (string) ($consultorio['CorreoUsu'] ?? '');
                         </form>
                     <?php endif; ?>
 
+                    <div class="border rounded p-2">
+                        <div class="small text-muted mb-2">Estatus institucional</div>
+                        <div class="d-grid gap-2">
+                            <?php foreach (['ACTIVO', 'INACTIVO', 'BLOQUEADO'] as $est): ?>
+                                <?php if ($estatusInst === $est) { continue; } ?>
+                                <form
+                                    method="POST"
+                                    action="<?= Helper::baseUrl('administrador/consultorio/cambiar-estatus-institucional'); ?>"
+                                    onsubmit="return confirm('¿Cambiar estatus institucional a <?= $esc($est); ?>? El registro se conservará por historial.');"
+                                >
+                                    <input type="hidden" name="csrf_token" value="<?= $esc($csrf); ?>">
+                                    <input type="hidden" name="estatus" value="<?= $esc($est); ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-dark w-100">
+                                        Marcar <?= $esc($est); ?>
+                                    </button>
+                                </form>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
                     <?php if ($pendienteActivacion): ?>
                         <form
                             method="POST"
@@ -174,6 +200,17 @@ $correo = (string) ($consultorio['CorreoUsu'] ?? '');
                             <input type="hidden" name="csrf_token" value="<?= $esc($csrf); ?>">
                             <button type="submit" class="btn btn-outline-primary w-100">Reenviar activación</button>
                         </form>
+
+                        <?php if (!empty($puedeEliminarSinActividad)): ?>
+                            <form
+                                method="POST"
+                                action="<?= Helper::baseUrl('administrador/consultorio/eliminar-sin-actividad'); ?>"
+                                onsubmit="return confirm('Esta acción eliminará definitivamente este registro porque todavía no tiene actividad asociada.');"
+                            >
+                                <input type="hidden" name="csrf_token" value="<?= $esc($csrf); ?>">
+                                <button type="submit" class="btn btn-outline-danger w-100">Cancelar alta sin actividad</button>
+                            </form>
+                        <?php endif; ?>
                     <?php elseif ($cuentaActiva): ?>
                         <form
                             method="POST"
@@ -194,7 +231,7 @@ $correo = (string) ($consultorio['CorreoUsu'] ?? '');
                     <?php endif; ?>
 
                     <p class="small text-muted mb-0 mt-2">
-                        Incidencias de acceso: módulo diferido (migración propuesta no aplicada).
+                        El administrador no tiene acceso a historia clínica, expedientes ni diagnósticos.
                     </p>
                 </div>
             </div>

@@ -620,6 +620,40 @@ class Cita extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Citas PROGRAMADA futuras del psicólogo (sin datos clínicos).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listarProgramadasFuturasPorPsicologo(
+        string $clvPsi,
+        string $desdeFecha
+    ): array {
+        $sql = "SELECT
+                    c.ClvCita,
+                    c.FechaCita,
+                    c.HraInicioCita,
+                    c.HraFinCita,
+                    c.DuracionAplicadaMin,
+                    c.ClvServ,
+                    s.NombreServicio
+                FROM cita c
+                LEFT JOIN servicios s ON s.ClvServ = c.ClvServ
+                WHERE c.ClvPsi = :clvPsi
+                  AND c.EstadoCita = 'PROGRAMADA'
+                  AND c.FechaCita >= :desdeFecha
+                ORDER BY c.FechaCita ASC, c.HraInicioCita ASC
+                LIMIT 200";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'clvPsi' => trim($clvPsi),
+            'desdeFecha' => trim($desdeFecha)
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function beginTransaccion(): void
     {
         if (!$this->db->inTransaction()) {
@@ -2343,6 +2377,8 @@ public function obtenerDetallePaciente(
                     ClvCita,
                     FechaCita,
                     HraInicioCita,
+                    HraFinCita,
+                    DuracionAplicadaMin,
                     EstadoCita,
                     ClvPsi,
                     ClvCons,
@@ -2396,7 +2432,7 @@ public function obtenerDetallePaciente(
                     ['ASISTIDA', 'INASISTENCIA'],
                     true
                 )
-                    ? 'La asistencia de esta cita ya fue registrada.'
+                    ? 'Esta cita ya tiene un resultado registrado y no puede modificarse.'
                     : 'Esta cita ya no puede cambiar de estado.';
 
                 return [
@@ -2407,40 +2443,22 @@ public function obtenerDetallePaciente(
                 ];
             }
 
-            $zona = new \DateTimeZone('America/Mexico_City');
-            $horaInicio = trim((string) ($cita['HraInicioCita'] ?? ''));
+            $ventana = new \App\Services\ResultadoCitaVentanaService();
+            $validacion = $ventana->validarAccion($cita, $nuevoEstado);
 
-            if (preg_match('/^\d{2}:\d{2}$/', $horaInicio)) {
-                $horaInicio .= ':00';
-            }
-
-            $inicioCita = \DateTimeImmutable::createFromFormat(
-                'Y-m-d H:i:s',
-                (string) $cita['FechaCita'] . ' ' . $horaInicio,
-                $zona
-            );
-
-            if (!$inicioCita) {
+            if (empty($validacion['ok'])) {
                 $this->db->rollBack();
 
                 return [
                     'ok' => false,
-                    'codigo' => 'FECHA_INVALIDA',
-                    'mensaje' =>
-                        'No fue posible validar el horario de la cita.'
-                ];
-            }
-
-            $ahora = new \DateTimeImmutable('now', $zona);
-
-            if ($inicioCita > $ahora) {
-                $this->db->rollBack();
-
-                return [
-                    'ok' => false,
-                    'codigo' => 'CITA_NO_INICIADA',
-                    'mensaje' =>
-                        'Podrás registrar la asistencia cuando comience la cita.'
+                    'codigo' => (string) (
+                        $validacion['codigo'] ?? 'TRANSICION_NO_PERMITIDA'
+                    ),
+                    'mensaje' => (string) (
+                        $validacion['mensaje']
+                        ?? 'No es posible registrar el resultado en este momento.'
+                    ),
+                    'estado' => $estadoActual
                 ];
             }
 
@@ -2466,7 +2484,7 @@ public function obtenerDetallePaciente(
                     'ok' => false,
                     'codigo' => 'TRANSICION_NO_PERMITIDA',
                     'mensaje' =>
-                        'Esta cita ya no puede cambiar de estado.'
+                        'Esta cita ya tiene un resultado registrado y no puede modificarse.'
                 ];
             }
 

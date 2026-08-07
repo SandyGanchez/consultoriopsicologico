@@ -644,7 +644,11 @@ class PacienteController extends Controller
 
             if (!$validacion['ok']) {
                 throw new RuntimeException(
-                    $validacion['mensaje']
+                    (string) (
+                        $validacion['mensaje']
+                        ?: 'Este horario acaba de dejar de estar disponible. '
+                            . 'Selecciona otro espacio.'
+                    )
                 );
             }
 
@@ -659,8 +663,8 @@ class PacienteController extends Controller
                 )
             ) {
                 throw new RuntimeException(
-                    'El horario seleccionado ya no está disponible. '
-                    . 'Selecciona otro horario.'
+                    'Este horario acaba de dejar de estar disponible. '
+                    . 'Selecciona otro espacio.'
                 );
             }
 

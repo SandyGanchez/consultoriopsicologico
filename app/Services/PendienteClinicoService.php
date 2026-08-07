@@ -83,6 +83,10 @@ class PendienteClinicoService
             'clvCita' => trim((string) ($cita['ClvCita'] ?? '')),
             'clvPac' => trim((string) ($cita['ClvPac'] ?? '')),
             'puedeRegistrarAsistencia' => false,
+            'puedeMarcarAsistida' => false,
+            'puedeMarcarInasistencia' => false,
+            'motivoBloqueoAsistencia' => '',
+            'horaInicioLegible' => '',
             'puedeCrearHistoria' => false,
             'puedeRegistrarSeguimiento' => false,
             'rutasSecundarias' => []
@@ -114,11 +118,27 @@ class PendienteClinicoService
         ];
 
         if ($estadoCita === 'PROGRAMADA') {
-            if ($inicio > $ahora) {
+            $ventana = (new ResultadoCitaVentanaService())
+                ->evaluarIndicadores($cita, $ahora);
+
+            if (
+                empty($ventana['puedeMarcarAsistida'])
+                && empty($ventana['puedeMarcarInasistencia'])
+            ) {
                 return array_merge($base, [
                     'estado' => self::CITA_FUTURA,
-                    'mensaje' =>
-                        'Podrás registrar la asistencia cuando comience la cita.'
+                    'mensaje' => (string) (
+                        $ventana['motivoBloqueoAsistencia']
+                        ?: 'Podrás registrar la asistencia cuando comience la cita.'
+                    ),
+                    'puedeMarcarAsistida' => false,
+                    'puedeMarcarInasistencia' => false,
+                    'motivoBloqueoAsistencia' => (string) (
+                        $ventana['motivoBloqueoAsistencia'] ?? ''
+                    ),
+                    'horaInicioLegible' => (string) (
+                        $ventana['horaInicioLegible'] ?? ''
+                    )
                 ]);
             }
 
@@ -135,7 +155,17 @@ class PendienteClinicoService
                 'mensaje' =>
                     'Esta cita está pendiente de registrar asistencia.',
                 'etiquetaAccion' => 'Registrar asistencia',
-                'puedeRegistrarAsistencia' => true
+                'puedeRegistrarAsistencia' => true,
+                'puedeMarcarAsistida' => !empty($ventana['puedeMarcarAsistida']),
+                'puedeMarcarInasistencia' => !empty(
+                    $ventana['puedeMarcarInasistencia']
+                ),
+                'motivoBloqueoAsistencia' => (string) (
+                    $ventana['motivoBloqueoAsistencia'] ?? ''
+                ),
+                'horaInicioLegible' => (string) (
+                    $ventana['horaInicioLegible'] ?? ''
+                )
             ]);
         }
 
@@ -312,6 +342,8 @@ class PendienteClinicoService
                     c.ClvCita,
                     c.FechaCita,
                     c.HraInicioCita,
+                    c.HraFinCita,
+                    c.DuracionAplicadaMin,
                     c.EstadoCita,
                     c.ClvPac,
                     c.ClvPsi,
@@ -378,6 +410,14 @@ class PendienteClinicoService
                 'etiquetaClinica' => $eval['etiquetaAccion'],
                 'urlClinica' => $this->urlPublica($eval['rutaAccion']),
                 'puedeRegistrarAsistencia' => !empty($eval['puedeRegistrarAsistencia']),
+                'puedeMarcarAsistida' => !empty($eval['puedeMarcarAsistida']),
+                'puedeMarcarInasistencia' => !empty($eval['puedeMarcarInasistencia']),
+                'motivoBloqueoAsistencia' => (string) (
+                    $eval['motivoBloqueoAsistencia'] ?? ''
+                ),
+                'horaInicioLegible' => (string) (
+                    $eval['horaInicioLegible'] ?? ''
+                ),
                 'urlVerPaciente' => $this->urlPublica(
                     (string) ($eval['rutasSecundarias']['verPaciente'] ?? '')
                 ),
@@ -388,15 +428,19 @@ class PendienteClinicoService
 
             if (($fila['EstadoCita'] ?? '') === 'PROGRAMADA') {
                 $inicio = $this->fechaHoraInicioCita($fila);
-                if (
-                    $inicio instanceof DateTimeImmutable
-                    && $inicio > $ahora
-                    && (
-                        $proximaEvaluacion === null
-                        || $inicio < $proximaEvaluacion
-                    )
-                ) {
-                    $proximaEvaluacion = $inicio;
+                $fin = (new ResultadoCitaVentanaService())->resolverFin($fila);
+                // Reevaluar al inicio y al fin de la sesión.
+                foreach ([$inicio, $fin] as $punto) {
+                    if (
+                        $punto instanceof DateTimeImmutable
+                        && $punto > $ahora
+                        && (
+                            $proximaEvaluacion === null
+                            || $punto < $proximaEvaluacion
+                        )
+                    ) {
+                        $proximaEvaluacion = $punto;
+                    }
                 }
             }
         }
@@ -706,6 +750,8 @@ class PendienteClinicoService
                     c.ClvCita,
                     c.FechaCita,
                     c.HraInicioCita,
+                    c.HraFinCita,
+                    c.DuracionAplicadaMin,
                     c.EstadoCita,
                     c.ClvPac,
                     c.ClvPsi,
@@ -724,12 +770,14 @@ class PendienteClinicoService
                 WHERE c.ClvPsi = :clvPsi
                   AND c.ClvCons = :clvCons
                   AND c.EstadoCita = 'PROGRAMADA'
+                  AND c.FechaCita = DATE(:ahoraFecha)
                   AND TIMESTAMP(c.FechaCita, c.HraInicioCita) <= :ahora";
 
         $params = [
             'clvPsi' => $clvPsi,
             'clvCons' => $clvCons,
-            'ahora' => $ahoraSql
+            'ahora' => $ahoraSql,
+            'ahoraFecha' => $ahoraSql
         ];
 
         if ($clvPac !== null && $clvPac !== '') {
@@ -741,8 +789,22 @@ class PendienteClinicoService
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+        $filas = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $ventana = new ResultadoCitaVentanaService();
+        $resultado = [];
+
+        foreach ($filas as $fila) {
+            $ind = $ventana->evaluarIndicadores($fila);
+            if (
+                !empty($ind['puedeMarcarAsistida'])
+                || !empty($ind['puedeMarcarInasistencia'])
+            ) {
+                $resultado[] = $fila;
+            }
+        }
+
+        return $resultado;
     }
 
     /**

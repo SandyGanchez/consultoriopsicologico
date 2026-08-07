@@ -59,6 +59,39 @@ function resumirTextoServicio(string $texto, int $limite = 110): string
             Configura tu precio, duración y disponibilidad para citas.
         </p>
 
+        <?php if (!empty($alertaCompatibilidad['mensaje'])): ?>
+            <div
+                class="alert alert-warning mt-3 mb-0"
+                role="status"
+                aria-live="polite"
+            >
+                <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                <?= htmlspecialchars(
+                    (string) $alertaCompatibilidad['mensaje'],
+                    ENT_QUOTES,
+                    'UTF-8'
+                ); ?>
+                <a
+                    class="alert-link ms-1"
+                    href="<?= Helper::baseUrl('psicologo/disponibilidad'); ?>"
+                >
+                    Revisar disponibilidad
+                </a>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($_SESSION['warning'])): ?>
+            <div class="alert alert-warning mt-3 mb-0" role="status">
+                <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                <?= htmlspecialchars(
+                    (string) $_SESSION['warning'],
+                    ENT_QUOTES,
+                    'UTF-8'
+                ); ?>
+            </div>
+            <?php unset($_SESSION['warning']); ?>
+        <?php endif; ?>
+
         <div class="d-flex flex-wrap gap-2 mt-3">
             <?php if (!empty($sugerenciasHabilitadas)): ?>
                 <button

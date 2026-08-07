@@ -238,6 +238,7 @@ public function actualizarContrasenaYLiberarCambio(
                 TelefonoUsu,
                 ContrasenaUsu,
                 EstadoUsu,
+                RequiereCambioContrasena,
                 ClvPer,
                 RolUsu
 
@@ -245,7 +246,7 @@ public function actualizarContrasenaYLiberarCambio(
 
             VALUES
 
-            (?,?,?,?,?,?,?)"
+            (?,?,?,?,?,?,?,?)"
 
         );
 
@@ -256,6 +257,7 @@ public function actualizarContrasenaYLiberarCambio(
             $datos['TelefonoUsu'],
             $datos['ContrasenaUsu'],
             1,
+            0,
             $datos['ClvPer'],
             'PACIENTE'
 

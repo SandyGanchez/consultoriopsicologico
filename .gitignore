@@ -1,3 +1,7 @@
 .env
 database/backups/
 *.sql.bak
+
+# Fotos de perfil generadas por usuarios
+public/uploads/perfiles/*
+!public/uploads/perfiles/perfil.png

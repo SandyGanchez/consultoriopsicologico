@@ -13,8 +13,10 @@ $esNavbarGlobal = !empty($esNavbarGlobal) || $esPortadaPlataforma;
 $nombreConsultorio = trim((string) ($consultorio['NombreCons'] ?? ''));
 $clvConsNav = trim((string) ($consultorio['ClvCons'] ?? ''));
 
-if ($esNavbarGlobal || $nombreConsultorio === '') {
+if ($esNavbarGlobal) {
     $nombreConsultorio = 'PsicoMatch';
+} elseif ($nombreConsultorio === '') {
+    $nombreConsultorio = $clvConsNav !== '' ? 'Consultorio' : 'PsicoMatch';
 }
 
 $logotipo = ($esNavbarGlobal || $clvConsNav === '')
@@ -43,6 +45,7 @@ $rutaPanel = $sesionActiva
     : Helper::baseUrl('login');
 
 $csrfLogout = Session::csrfToken();
+$accionAuthActiva = strtolower(trim((string) ($accionAuthActiva ?? '')));
 
 $mostrarNavConsultorio = !$esNavbarGlobal
     && $clvConsNav !== ''
@@ -65,17 +68,36 @@ $enlacesConsultorio = [
 $renderAccionesSesion = static function () use (
     $sesionActiva,
     $rutaPanel,
-    $csrfLogout
+    $csrfLogout,
+    $accionAuthActiva
 ): void {
     if (!$sesionActiva) {
+        $claseLogin = $accionAuthActiva === 'login'
+            ? 'btn btn-secondary rounded-pill px-3'
+            : 'btn btn-outline-secondary rounded-pill px-3';
+        $claseRegistro = $accionAuthActiva === 'registro'
+            ? 'btn btn-secondary rounded-pill px-4'
+            : 'btn rounded-pill px-4 text-white navbar-public__cta';
         ?>
         <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-            <a class="btn btn-outline-secondary rounded-pill px-3" href="<?= Helper::baseUrl('login'); ?>">
+            <a
+                class="<?= htmlspecialchars($claseLogin, ENT_QUOTES, 'UTF-8'); ?>"
+                href="<?= Helper::baseUrl('login'); ?>"
+                <?php if ($accionAuthActiva === 'login'): ?>
+                    aria-current="page"
+                <?php endif; ?>
+            >
                 Iniciar sesión
             </a>
         </li>
         <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-            <a class="btn rounded-pill px-4 text-white navbar-public__cta" href="<?= Helper::baseUrl('registro'); ?>">
+            <a
+                class="<?= htmlspecialchars($claseRegistro, ENT_QUOTES, 'UTF-8'); ?>"
+                href="<?= Helper::baseUrl('registro'); ?>"
+                <?php if ($accionAuthActiva === 'registro'): ?>
+                    aria-current="page"
+                <?php endif; ?>
+            >
                 Crear cuenta
             </a>
         </li>

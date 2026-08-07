@@ -21,7 +21,7 @@ if ($identidadPlataforma) {
     $nombreCons = trim((string) ($consultorioData['NombreCons'] ?? ''));
 
     if ($nombreCons === '') {
-        $nombreCons = 'PsicoMatch';
+        $nombreCons = 'Consultorio';
     }
 
     $slogan = trim((string) ($consultorioData['Slogan'] ?? ''));
@@ -43,6 +43,6 @@ if ($identidadPlataforma) {
     }
 
     if ($iniciales === '') {
-        $iniciales = 'PM';
+        $iniciales = 'C';
     }
 }

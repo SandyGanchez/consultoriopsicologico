@@ -1549,6 +1549,46 @@ public function psicologos(): void
     $psicologos = (new ActivacionCuentaService())
         ->enriquecerEstadosPsicologos($psicologos);
 
+    $gestion = new \App\Services\GestionPsicologoConsultorioService();
+
+    foreach ($psicologos as &$psi) {
+        try {
+            $resumen = $gestion->resumenDependencias(
+                (string) $psi['ClvPsi'],
+                (string) $clvCons
+            );
+            $psi['Dependencias'] = $resumen;
+            $psi['CitasFuturasProgramadas'] =
+                (int) ($resumen['citasFuturas'] ?? 0);
+            $psi['TieneActividadHistorica'] =
+                !empty($resumen['tieneActividadHistorica']);
+            $psi['TieneActividadClinica'] =
+                !empty($resumen['tieneActividadHistorica']);
+            $psi['PuedeEliminarFisicamente'] =
+                !empty($resumen['puedeEliminarFisicamente']);
+            $psi['PuedeDesactivar'] =
+                !empty($resumen['puedeDesactivar']);
+            $psi['PuedeReactivar'] =
+                !empty($resumen['puedeReactivar']);
+            $psi['PuedeCancelarRegistro'] =
+                !empty($resumen['pendienteActivacion'])
+                && !empty($resumen['puedeEliminarFisicamente']);
+            $psi['UrlCitasPendientes'] =
+                (string) ($resumen['urlCitasPendientes'] ?? 'consultorio/agenda');
+        } catch (\Throwable $e) {
+            $psi['Dependencias'] = [];
+            $psi['CitasFuturasProgramadas'] = 0;
+            $psi['TieneActividadHistorica'] = true;
+            $psi['TieneActividadClinica'] = true;
+            $psi['PuedeEliminarFisicamente'] = false;
+            $psi['PuedeDesactivar'] = false;
+            $psi['PuedeReactivar'] = false;
+            $psi['PuedeCancelarRegistro'] = false;
+            $psi['UrlCitasPendientes'] = 'consultorio/agenda';
+        }
+    }
+    unset($psi);
+
     $this->view(
         'consultorio/psicologos/index',
         [
@@ -1905,25 +1945,23 @@ public function actualizarPsicologo(): void
     }
 
     try {
-        $psicologoModel = new Psicologo();
+        $resultado = (new ActivacionCuentaService())
+            ->actualizarPsicologoConsultorio(
+                $clvPsi,
+                (string) $this->consultorio['ClvCons'],
+                $datos,
+                (string) $this->usuario['ClvUsu']
+            );
 
-        $psicologoModel->actualizar(
-            $clvPsi,
-            $this->consultorio['ClvCons'],
-            $datos
-        );
+        if (!empty($resultado['ok'])) {
+            $_SESSION['success'] = (string) $resultado['mensaje'];
+        } else {
+            $_SESSION['error'] = (string) (
+                $resultado['mensaje'] ?? 'No fue posible actualizar.'
+            );
+        }
 
-        $_SESSION['success'] =
-            'El especialista se actualizó correctamente.';
-
-        header(
-            'Location: ' .
-            \App\Helpers\Helper::baseUrl(
-                'consultorio/psicologos'
-            )
-        );
-
-        exit;
+        Response::redirect('consultorio/psicologos');
     } catch (\Throwable $e) {
         $datos['clvPsi'] = $clvPsi;
         $errores['general'] = $e->getMessage();
@@ -1943,50 +1981,125 @@ public function actualizarPsicologo(): void
         );
     }
 }
+
+/**
+ * Legacy GET eliminado: no cambia estado. Redirige al listado.
+ */
 public function cambiarEstatusPsicologo(): void
 {
-    $id = trim($_GET['id'] ?? '');
+    $_SESSION['warning'] =
+        'Las acciones de estado deben realizarse con Desactivar o Reactivar (POST).';
 
-    if ($id === '') {
+    Response::redirect('consultorio/psicologos');
+}
+
+public function eliminarPsicologo(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        Response::redirect('consultorio/psicologos');
+    }
+
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
         $_SESSION['error'] =
-            'No se recibió la clave del especialista.';
+            'La solicitud no es válida. Intenta nuevamente.';
+        Response::redirect('consultorio/psicologos');
+    }
 
-        header(
-            'Location: ' .
-            \App\Helpers\Helper::baseUrl(
-                'consultorio/psicologos'
-            )
+    // Autoridad: ClvCons de sesión. Ignorar cualquier ClvCons/Rol/puedeEliminar del POST.
+    $clvPsi = trim((string) ($_POST['clvPsi'] ?? ''));
+
+    if ($clvPsi === '') {
+        $_SESSION['error'] = 'No se identificó al especialista.';
+        Response::redirect('consultorio/psicologos');
+    }
+
+    $resultado = (new \App\Services\GestionPsicologoConsultorioService())
+        ->eliminarRegistroSinActividad(
+            $clvPsi,
+            (string) $this->consultorio['ClvCons']
         );
 
-        exit;
+    if (!empty($resultado['ok'])) {
+        $_SESSION['success'] = $resultado['mensaje'];
+    } else {
+        $_SESSION['error'] = $resultado['mensaje'];
     }
 
-    try {
-        $psicologoModel = new Psicologo();
+    Response::redirect('consultorio/psicologos');
+}
 
-        $nuevoEstatus =
-            $psicologoModel->cambiarEstatus(
-                $id,
-                $this->consultorio['ClvCons']
-            );
+public function cancelarRegistroPsicologo(): void
+{
+    // Alias de eliminar: misma política y revalidación.
+    $this->eliminarPsicologo();
+}
 
-        $_SESSION['success'] =
-            $nuevoEstatus === 'ACTIVO'
-                ? 'El especialista fue activado correctamente.'
-                : 'El especialista fue inactivado correctamente.';
-    } catch (\Throwable $e) {
+public function desactivarPsicologo(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        Response::redirect('consultorio/psicologos');
+    }
+
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
         $_SESSION['error'] =
-            $e->getMessage();
+            'La solicitud no es válida. Intenta nuevamente.';
+        Response::redirect('consultorio/psicologos');
     }
 
-    header(
-        'Location: ' .
-        \App\Helpers\Helper::baseUrl(
-            'consultorio/psicologos'
-        )
-    );
+    $clvPsi = trim((string) ($_POST['clvPsi'] ?? ''));
 
-    exit;
+    if ($clvPsi === '') {
+        $_SESSION['error'] = 'No se identificó al especialista.';
+        Response::redirect('consultorio/psicologos');
+    }
+
+    $resultado = (new \App\Services\GestionPsicologoConsultorioService())
+        ->desactivar(
+            $clvPsi,
+            (string) $this->consultorio['ClvCons']
+        );
+
+    if (!empty($resultado['ok'])) {
+        $_SESSION['success'] = $resultado['mensaje'];
+    } else {
+        $_SESSION['error'] = $resultado['mensaje'];
+    }
+
+    Response::redirect('consultorio/psicologos');
+}
+
+public function reactivarPsicologo(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        Response::redirect('consultorio/psicologos');
+    }
+
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] =
+            'La solicitud no es válida. Intenta nuevamente.';
+        Response::redirect('consultorio/psicologos');
+    }
+
+    $clvPsi = trim((string) ($_POST['clvPsi'] ?? ''));
+
+    if ($clvPsi === '') {
+        $_SESSION['error'] = 'No se identificó al especialista.';
+        Response::redirect('consultorio/psicologos');
+    }
+
+    $resultado = (new \App\Services\GestionPsicologoConsultorioService())
+        ->reactivar(
+            $clvPsi,
+            (string) $this->consultorio['ClvCons']
+        );
+
+    if (!empty($resultado['ok'])) {
+        $_SESSION['success'] = $resultado['mensaje'];
+    } else {
+        $_SESSION['error'] = $resultado['mensaje'];
+    }
+
+    Response::redirect('consultorio/psicologos');
 }
 private function validarDatosPsicologo(
     array $datos
@@ -3282,5 +3395,250 @@ private function validarDatosPsicologo(
         }
 
         Response::redirect('consultorio/incidencias/' . $idInc);
+    }
+
+    /*
+    =========================================
+              GESTIÓN DE PACIENTES
+    =========================================
+    */
+
+    public function pacientes(): void
+    {
+        $clvCons = (string) $this->consultorio['ClvCons'];
+        $servicio = new \App\Services\GestionPacienteConsultorioService();
+
+        $listado = $servicio->listar($clvCons, [
+            'q' => (string) ($_GET['q'] ?? ''),
+            'estado' => (string) ($_GET['estado'] ?? 'todos'),
+            'actividad' => (string) ($_GET['actividad'] ?? 'todos'),
+            'pagina' => (int) ($_GET['pagina'] ?? 1),
+        ]);
+
+        $this->view(
+            'consultorio/pacientes/index',
+            [
+                'titulo' => 'Pacientes',
+                'usuario' => $this->usuario,
+                'consultorio' => $this->consultorio,
+                'listado' => $listado,
+                'success' => $_SESSION['success'] ?? null,
+                'error' => $_SESSION['error'] ?? null,
+                'warning' => $_SESSION['warning'] ?? null,
+            ],
+            'consultorio'
+        );
+
+        unset($_SESSION['success'], $_SESSION['error'], $_SESSION['warning']);
+    }
+
+    public function verPaciente(string $id): void
+    {
+        $clvCons = (string) $this->consultorio['ClvCons'];
+        $clvPac = trim($id);
+        $servicio = new \App\Services\GestionPacienteConsultorioService();
+
+        try {
+            $ficha = $servicio->obtenerFicha($clvPac, $clvCons);
+        } catch (\Throwable $e) {
+            $_SESSION['error'] = $e->getMessage();
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $this->view(
+            'consultorio/pacientes/ver',
+            [
+                'titulo' => 'Paciente',
+                'usuario' => $this->usuario,
+                'consultorio' => $this->consultorio,
+                'ficha' => $ficha,
+                'success' => $_SESSION['success'] ?? null,
+                'error' => $_SESSION['error'] ?? null,
+                'warning' => $_SESSION['warning'] ?? null,
+            ],
+            'consultorio'
+        );
+
+        unset($_SESSION['success'], $_SESSION['error'], $_SESSION['warning']);
+    }
+
+    public function editarPaciente(string $id): void
+    {
+        $clvCons = (string) $this->consultorio['ClvCons'];
+        $clvPac = trim($id);
+        $servicio = new \App\Services\GestionPacienteConsultorioService();
+
+        try {
+            $ficha = $servicio->obtenerFicha($clvPac, $clvCons);
+        } catch (\Throwable $e) {
+            $_SESSION['error'] = $e->getMessage();
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $this->view(
+            'consultorio/pacientes/editar',
+            [
+                'titulo' => 'Editar paciente',
+                'usuario' => $this->usuario,
+                'consultorio' => $this->consultorio,
+                'ficha' => $ficha,
+                'errores' => [],
+            ],
+            'consultorio'
+        );
+    }
+
+    public function actualizarPaciente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            $_SESSION['error'] = 'La solicitud no es válida. Intenta nuevamente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $clvPac = trim((string) ($_POST['ClvPac'] ?? ''));
+        $clvCons = (string) $this->consultorio['ClvCons'];
+
+        if ($clvPac === '') {
+            $_SESSION['error'] = 'No se identificó al paciente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $resultado = (new \App\Services\GestionPacienteConsultorioService())
+            ->actualizarAdministrativo($clvPac, $clvCons, [
+                'NombrePer' => $_POST['NombrePer'] ?? '',
+                'ApPatPer' => $_POST['ApPatPer'] ?? '',
+                'ApMatPer' => $_POST['ApMatPer'] ?? '',
+                'TelefonoUsu' => $_POST['TelefonoUsu'] ?? '',
+            ]);
+
+        if (!empty($resultado['ok'])) {
+            $_SESSION['success'] = $resultado['mensaje'];
+            Response::redirect('consultorio/pacientes/ver/' . rawurlencode($clvPac));
+            return;
+        }
+
+        $_SESSION['error'] = $resultado['mensaje'];
+        Response::redirect('consultorio/pacientes/editar/' . rawurlencode($clvPac));
+    }
+
+    public function eliminarPaciente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            $_SESSION['error'] = 'La solicitud no es válida. Intenta nuevamente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        // Autoridad: ClvCons de sesión. Ignorar ClvCons/puedeEliminar del POST.
+        $clvPac = trim((string) ($_POST['ClvPac'] ?? ''));
+
+        if ($clvPac === '') {
+            $_SESSION['error'] = 'No se identificó al paciente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $resultado = (new \App\Services\GestionPacienteConsultorioService())
+            ->eliminarSinActividad(
+                $clvPac,
+                (string) $this->consultorio['ClvCons']
+            );
+
+        if (!empty($resultado['ok'])) {
+            $_SESSION['success'] = $resultado['mensaje'];
+        } else {
+            $_SESSION['error'] = $resultado['mensaje'];
+        }
+
+        Response::redirect('consultorio/pacientes');
+    }
+
+    public function inactivarPaciente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            $_SESSION['error'] = 'La solicitud no es válida. Intenta nuevamente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $clvPac = trim((string) ($_POST['ClvPac'] ?? ''));
+
+        if ($clvPac === '') {
+            $_SESSION['error'] = 'No se identificó al paciente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $resultado = (new \App\Services\GestionPacienteConsultorioService())
+            ->inactivar(
+                $clvPac,
+                (string) $this->consultorio['ClvCons']
+            );
+
+        if (!empty($resultado['ok'])) {
+            $_SESSION['success'] = $resultado['mensaje'];
+            if (!empty($resultado['advertencia'])) {
+                $_SESSION['warning'] = $resultado['advertencia'];
+            }
+        } else {
+            $_SESSION['error'] = $resultado['mensaje'];
+        }
+
+        Response::redirect('consultorio/pacientes');
+    }
+
+    public function reactivarPaciente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            $_SESSION['error'] = 'La solicitud no es válida. Intenta nuevamente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $clvPac = trim((string) ($_POST['ClvPac'] ?? ''));
+
+        if ($clvPac === '') {
+            $_SESSION['error'] = 'No se identificó al paciente.';
+            Response::redirect('consultorio/pacientes');
+            return;
+        }
+
+        $resultado = (new \App\Services\GestionPacienteConsultorioService())
+            ->reactivar(
+                $clvPac,
+                (string) $this->consultorio['ClvCons']
+            );
+
+        if (!empty($resultado['ok'])) {
+            $_SESSION['success'] = $resultado['mensaje'];
+        } else {
+            $_SESSION['error'] = $resultado['mensaje'];
+        }
+
+        Response::redirect('consultorio/pacientes');
     }
 }

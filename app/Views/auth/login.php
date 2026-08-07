@@ -38,12 +38,24 @@ if ($sloganMarca !== '' && mb_strlen($sloganMarca) > 80) {
 }
 
 /*
- * Panel izquierdo: mismos valores que produce Crear cuenta
- * (variables-identidad.php con identidadPlataforma = true).
- * No cambiar el diseño del registro; solo reutilizar panel-portada.php.
+ * Panel izquierdo: misma identidad de consultorio que registro
+ * (variables-identidad.php con identidadPlataforma = false).
  */
-$portadaUrl = null;
-$slogan = 'Tu bienestar emocional es nuestra prioridad';
+$consultorioPanel = is_array($identidad['consultorio'] ?? null)
+    ? $identidad['consultorio']
+    : [];
+
+$portadaUrl = $tieneConsultorio
+    ? Helper::imagenPortadaConsultorioUrl(
+        $consultorioPanel['ImagenPortada'] ?? null
+    )
+    : null;
+
+if ($portadaUrl === '') {
+    $portadaUrl = null;
+}
+
+$slogan = $tieneConsultorio ? $sloganMarca : '';
 $nombreCons = $tieneConsultorio && $nombreMarca !== ''
     ? $nombreMarca
     : 'Atención psicológica';

@@ -138,7 +138,9 @@ class Consultorio extends Model
 
                 p.NombrePer,
                 p.ApPatPer,
-                p.ApMatPer
+                p.ApMatPer,
+                p.FechaNacimiento,
+                p.GeneroPer
             FROM consultorio c
             LEFT JOIN direccion d
                 ON d.ClvDir = c.ClvDir

@@ -279,18 +279,38 @@ class AuthService
 
             $db->commit();
 
+            // Misma fuente canónica de sesión que el login (Usuario::buscarPorCorreo).
             $usuario = (new Usuario())->buscarPorCorreo(
                 $correo
             );
 
+            if (
+                !is_array($usuario)
+                || (string) ($usuario['ClvUsu'] ?? '') === ''
+                || strtoupper((string) ($usuario['RolUsu'] ?? '')) !== 'PACIENTE'
+                || (int) ($usuario['EstadoUsu'] ?? 0) !== 1
+            ) {
+                throw new RuntimeException(
+                    'La cuenta se creó, pero no fue posible iniciar la sesión.'
+                );
+            }
+
             Session::regenerar();
             Session::set('usuario', $usuario);
 
-            Response::redirect('paciente');
+            // Destino canónico del panel paciente (Helper::rutaPanelPorRol / /paciente).
+            Response::redirect(
+                \App\Helpers\Helper::rutaPanelPorRol('PACIENTE')
+            );
 
         } catch (Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
+            }
+
+            // Si falló después del COMMIT (sesión), no dejar sesión parcial.
+            if (Session::has('usuario')) {
+                Session::remove('usuario');
             }
 
             Session::set(

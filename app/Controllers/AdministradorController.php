@@ -618,6 +618,9 @@ public function verConsultorio(string $id = ''): void
             (string) ($cuenta['ClvUsu'] ?? '')
         );
 
+        $actividad = (new AdministradorService())
+            ->evaluarActividadConsultorio((string) $consultorio['ClvCons']);
+
         $this->view(
             'administrador/consultorios/ver',
             [
@@ -625,6 +628,7 @@ public function verConsultorio(string $id = ''): void
                 'consultorio' => $consultorio,
                 'estadoPaginaPublica' => $estadoPagina,
                 'activacionInfo' => $activacionInfo,
+                'puedeEliminarSinActividad' => !empty($actividad['puedeEliminar']),
                 'soportaRecuperacion' => (new ActivacionCuentaService())
                     ->soportaRecuperacionConsultorio(),
                 'success' => Session::getFlash('success'),
@@ -645,36 +649,198 @@ public function verConsultorio(string $id = ''): void
 */
 
 /**
- * Legacy sin uso en UI (alcance admin = cuentas).
- * El contenido comercial/operativo se edita en el módulo CONSULTORIO.
+ * Edición administrativa (whitelist) del consultorio de la instalación.
  */
-public function editarConsultorio(
-    string $id
-): void {
-    unset($id);
+public function editarConsultorio(string $id = ''): void
+{
+    try {
+        $consultorio = $this->exigirConsultorioUnicoDeInstalacion();
 
-    Session::setFlash(
-        'error',
-        'La edición administrativa del consultorio ya no está disponible. El responsable actualiza su información desde su panel.'
-    );
+        if (
+            $id !== ''
+            && !$this->coincideClaveInstalacion($id, (string) $consultorio['ClvCons'])
+        ) {
+            throw new RuntimeException(
+                'Solo puede administrarse el consultorio de esta instalación.'
+            );
+        }
 
-    Response::redirect('administrador/consultorios');
+        $service = new AdministradorService();
+        $cuenta = $service->resolverCuentaPrincipalUnica(
+            (string) $consultorio['ClvCons']
+        );
+        $consultorio = array_merge($consultorio, $cuenta);
+
+        $datos = Session::getFlash('datos') ?? [
+            'nombreConsultorio' => (string) ($consultorio['NombreCons'] ?? ''),
+            'telefonoConsultorio' => (string) ($consultorio['TelefonoCons'] ?? ''),
+            'correoConsultorio' => (string) ($consultorio['CorreoElectronico'] ?? ''),
+            'pais' => (string) ($consultorio['PaisDir'] ?? 'México'),
+            'estado' => (string) ($consultorio['EstadoDir'] ?? ''),
+            'municipio' => (string) ($consultorio['MunicipioDir'] ?? ''),
+            'colonia' => (string) ($consultorio['ColoniaDir'] ?? ''),
+            'codigoPostal' => (string) ($consultorio['CodPostDir'] ?? ''),
+            'nombreResponsable' => (string) ($consultorio['NombrePer'] ?? ''),
+            'apellidoPaternoResponsable' => (string) ($consultorio['ApPatPer'] ?? ''),
+            'apellidoMaternoResponsable' => (string) ($consultorio['ApMatPer'] ?? ''),
+            'fechaNacimientoResponsable' => (string) ($consultorio['FechaNacimiento'] ?? ''),
+            'generoResponsable' => (string) ($consultorio['GeneroPer'] ?? ''),
+            'telefonoResponsable' => (string) ($consultorio['TelefonoUsu'] ?? ''),
+            'correoResponsable' => (string) ($consultorio['CorreoUsu'] ?? ''),
+            'slogan' => (string) ($consultorio['Slogan'] ?? ''),
+            'descripcion' => (string) ($consultorio['Descripcion'] ?? ''),
+            'limiteCancelacion' => (string) ($consultorio['LimiteCancHoras'] ?? '24'),
+            'calle' => (string) ($consultorio['CalleDir'] ?? ''),
+            'numeroExterior' => (string) ($consultorio['NumExtDir'] ?? ''),
+            'numeroInterior' => (string) ($consultorio['NumIntDir'] ?? ''),
+        ];
+
+        $this->view(
+            'administrador/consultorios/form',
+            [
+                'usuario' => $this->usuario,
+                'consultorio' => $consultorio,
+                'datos' => $datos,
+                'errores' => Session::getFlash('errores') ?? [],
+                'modoEdicion' => true,
+            ],
+            'master_admin'
+        );
+    } catch (Throwable $e) {
+        Session::setFlash('error', $e->getMessage());
+        Response::redirect('administrador/consultorio');
+    }
 }
 
 /**
- * Legacy sin uso en UI. Bloquea actualizaciones manuales por POST.
+ * Actualiza solo campos administrativos autorizados (whitelist vía formulario).
+ * No acepta RolUsu, ClvUsu, ClvCons ni contraseña desde POST.
  */
-public function actualizarConsultorio(
-    string $id
-): void {
-    unset($id);
+public function actualizarConsultorio(string $id = ''): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        Response::redirect('administrador/consultorio');
+        return;
+    }
 
-    Session::setFlash(
-        'error',
-        'No es posible actualizar el consultorio desde el panel administrativo.'
-    );
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+        Session::setFlash('error', 'La solicitud no es válida. Intenta nuevamente.');
+        Response::redirect('administrador/consultorio');
+        return;
+    }
 
-    Response::redirect('administrador/consultorios');
+    try {
+        $consultorio = $this->exigirConsultorioUnicoDeInstalacion();
+        $clvCons = (string) $consultorio['ClvCons'];
+
+        if (
+            $id !== ''
+            && !$this->coincideClaveInstalacion($id, $clvCons)
+        ) {
+            throw new RuntimeException(
+                'Solo puede administrarse el consultorio de esta instalación.'
+            );
+        }
+
+        $cuenta = (new AdministradorService())
+            ->resolverCuentaPrincipalUnica($clvCons);
+
+        $datos = $this->obtenerDatosFormulario();
+        if ($datos['limiteCancelacion'] === '') {
+            $datos['limiteCancelacion'] = (string) ($consultorio['LimiteCancHoras'] ?? '24');
+        }
+
+        $errores = $this->validarDatosConsultorio(
+            $datos,
+            $clvCons,
+            (string) $cuenta['ClvUsu']
+        );
+
+        if (!empty($errores)) {
+            Session::setFlash('errores', $errores);
+            Session::setFlash('datos', $datos);
+            Response::redirect('administrador/consultorio/editar');
+            return;
+        }
+
+        (new AdministradorService())->actualizarConsultorio($clvCons, $datos);
+
+        Session::setFlash(
+            'success',
+            'Datos administrativos del consultorio actualizados.'
+        );
+        Response::redirect('administrador/consultorio');
+    } catch (Throwable $e) {
+        Session::setFlash('error', $e->getMessage());
+        Response::redirect('administrador/consultorio');
+    }
+}
+
+public function cambiarEstatusInstitucional(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        Response::redirect('administrador/consultorio');
+        return;
+    }
+
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+        Session::setFlash('error', 'La solicitud no es válida. Intenta nuevamente.');
+        Response::redirect('administrador/consultorio');
+        return;
+    }
+
+    try {
+        $consultorio = $this->exigirConsultorioUnicoDeInstalacion();
+        $estatus = strtoupper(trim((string) ($_POST['estatus'] ?? '')));
+
+        (new AdministradorService())->cambiarEstatusInstitucional(
+            (string) $consultorio['ClvCons'],
+            $estatus
+        );
+
+        Session::setFlash(
+            'success',
+            'Estatus institucional actualizado a ' . $estatus . '.'
+        );
+    } catch (Throwable $e) {
+        Session::setFlash('error', $e->getMessage());
+    }
+
+    Response::redirect('administrador/consultorio');
+}
+
+public function eliminarConsultorioSinActividad(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        Response::redirect('administrador/consultorio');
+        return;
+    }
+
+    if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+        Session::setFlash('error', 'La solicitud no es válida. Intenta nuevamente.');
+        Response::redirect('administrador/consultorio');
+        return;
+    }
+
+    try {
+        $consultorio = $this->exigirConsultorioUnicoDeInstalacion();
+        $resultado = (new AdministradorService())
+            ->eliminarConsultorioSinActividad(
+                (string) $consultorio['ClvCons']
+            );
+
+        if (!empty($resultado['ok'])) {
+            Session::setFlash('success', $resultado['mensaje']);
+            Response::redirect('administrador');
+            return;
+        }
+
+        Session::setFlash('error', $resultado['mensaje']);
+    } catch (Throwable $e) {
+        Session::setFlash('error', $e->getMessage());
+    }
+
+    Response::redirect('administrador/consultorio');
 }
    /*
 =========================================

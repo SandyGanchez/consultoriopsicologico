@@ -22,13 +22,19 @@ use App\Helpers\Helper;
                 y no solaparse entre sí.
             </p>
 
+            <p class="text-muted mb-0 mt-2">
+                Los horarios mostrados a los pacientes son opciones de inicio.
+                Cuando una cita se reserva, las opciones que se superponen
+                dejan de estar disponibles.
+            </p>
+
         </div>
 
     </div>
 
     <?php if (!empty($success)): ?>
 
-        <div class="alert alert-success alert-dismissible fade show">
+        <div class="alert alert-success alert-dismissible fade show" role="status">
 
             <?= htmlspecialchars($success); ?>
 
@@ -43,9 +49,58 @@ use App\Helpers\Helper;
 
     <?php endif; ?>
 
+    <?php if (!empty($warning)): ?>
+
+        <div
+            class="alert alert-warning alert-dismissible fade show"
+            role="status"
+        >
+            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+            <?= htmlspecialchars((string) $warning); ?>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Cerrar"
+            ></button>
+        </div>
+
+    <?php endif; ?>
+
+    <?php
+    $alertaCompatibilidad = $alertaCompatibilidad ?? null;
+    $resumenPorBloque = is_array($resumenPorBloque ?? null)
+        ? $resumenPorBloque
+        : [];
+    ?>
+
+    <?php if (!empty($alertaCompatibilidad['mensaje'])): ?>
+
+        <div
+            class="alert alert-danger alert-dismissible fade show"
+            role="alert"
+            aria-live="polite"
+        >
+            <i class="bi bi-x-octagon-fill me-1" aria-hidden="true"></i>
+            <strong>Incompatibilidad de servicios:</strong>
+            <?= htmlspecialchars(
+                (string) $alertaCompatibilidad['mensaje']
+            ); ?>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Cerrar"
+            ></button>
+        </div>
+
+    <?php endif; ?>
+
     <?php if (!empty($error)): ?>
 
-        <div class="alert alert-danger alert-dismissible fade show">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
 
             <?= htmlspecialchars($error); ?>
 
@@ -172,6 +227,29 @@ use App\Helpers\Helper;
                                 ] ?? '') === 'ACTIVA';
                             $erroresBloque =
                                 $errores[$clave] ?? [];
+                            $resumenBloque =
+                                $resumenPorBloque[$clave] ?? null;
+                            $nivelAlerta = (string) (
+                                $resumenBloque['nivelAlerta'] ?? ''
+                            );
+                            $badgeAlerta = match ($nivelAlerta) {
+                                'verde' => 'success',
+                                'ambar' => 'warning',
+                                'rojo' => 'danger',
+                                default => 'secondary'
+                            };
+                            $iconoAlerta = match ($nivelAlerta) {
+                                'verde' => 'bi-check-circle-fill',
+                                'ambar' => 'bi-exclamation-triangle-fill',
+                                'rojo' => 'bi-x-octagon-fill',
+                                default => 'bi-info-circle'
+                            };
+                            $textoAlerta = match ($nivelAlerta) {
+                                'verde' => 'Compatible',
+                                'ambar' => 'Revisar',
+                                'rojo' => 'Incompatible',
+                                default => 'Sin evaluar'
+                            };
                         ?>
 
                         <tr>
@@ -293,6 +371,31 @@ use App\Helpers\Helper;
 
                                 <?php endif; ?>
 
+                                <?php if ($nivelAlerta !== ''): ?>
+                                    <span
+                                        class="badge bg-<?= htmlspecialchars(
+                                            $badgeAlerta
+                                        ); ?> ms-1"
+                                        title="<?= htmlspecialchars(
+                                            (string) (
+                                                $resumenBloque['mensajeAlerta']
+                                                ?? $textoAlerta
+                                            )
+                                        ); ?>"
+                                    >
+                                        <i
+                                            class="bi <?= htmlspecialchars(
+                                                $iconoAlerta
+                                            ); ?>"
+                                            aria-hidden="true"
+                                        ></i>
+                                        <span class="visually-hidden">
+                                            Estado de compatibilidad:
+                                        </span>
+                                        <?= htmlspecialchars($textoAlerta); ?>
+                                    </span>
+                                <?php endif; ?>
+
                             </td>
 
                             <td>
@@ -349,6 +452,160 @@ use App\Helpers\Helper;
                             </td>
 
                         </tr>
+
+                        <?php if (
+                            is_array($resumenBloque)
+                            && !empty($resumenBloque['servicios'])
+                        ): ?>
+                            <tr>
+                                <td colspan="4" class="bg-light">
+                                    <?php if (!empty($resumenBloque['efectivo'])): ?>
+                                        <p class="small mb-2">
+                                            Bloque efectivo:
+                                            <?= htmlspecialchars(
+                                                substr(
+                                                    (string) $resumenBloque['efectivo']['inicio'],
+                                                    0,
+                                                    5
+                                                )
+                                            ); ?>
+                                            –
+                                            <?= htmlspecialchars(
+                                                substr(
+                                                    (string) $resumenBloque['efectivo']['fin'],
+                                                    0,
+                                                    5
+                                                )
+                                            ); ?>
+                                            (<?= (int) $resumenBloque['efectivo']['minutos']; ?> min)
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($resumenBloque['mensajeAlerta'])): ?>
+                                        <p class="small mb-2">
+                                            <i
+                                                class="bi <?= htmlspecialchars($iconoAlerta); ?>"
+                                                aria-hidden="true"
+                                            ></i>
+                                            <?= htmlspecialchars(
+                                                (string) $resumenBloque['mensajeAlerta']
+                                            ); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Servicio</th>
+                                                    <th scope="col">Duración</th>
+                                                    <th scope="col">Capacidad máxima teórica</th>
+                                                    <th scope="col">Opciones de inicio actualmente disponibles</th>
+                                                    <th scope="col">Restante</th>
+                                                    <th scope="col">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach (
+                                                    $resumenBloque['servicios'] as $filaServ
+                                                ): ?>
+                                                    <?php
+                                                    $nivelFila = (string) (
+                                                        $filaServ['nivelAlerta'] ?? ''
+                                                    );
+                                                    $badgeFila = match ($nivelFila) {
+                                                        'verde' => 'success',
+                                                        'ambar' => 'warning',
+                                                        'rojo' => 'danger',
+                                                        default => 'secondary'
+                                                    };
+                                                    $capTeorica = (int) (
+                                                        $filaServ['capacidadTeorica'] ?? 0
+                                                    );
+                                                    $opcionesInicio = (int) (
+                                                        $filaServ['opcionesInicioDisponibles']
+                                                        ?? 0
+                                                    );
+                                                    ?>
+                                                    <tr>
+                                                        <td>
+                                                            <?= htmlspecialchars(
+                                                                (string) (
+                                                                    $filaServ['NombreServicio']
+                                                                    ?? ''
+                                                                )
+                                                            ); ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= (int) (
+                                                                $filaServ['DuracionMinutos']
+                                                                ?? 0
+                                                            ); ?> min
+                                                        </td>
+                                                        <td>
+                                                            <?= $capTeorica; ?>
+                                                            <?= $capTeorica === 1
+                                                                ? 'cita'
+                                                                : 'citas'; ?>
+                                                            <span class="visually-hidden">
+                                                                (máximo teórico consecutivas, no garantizadas)
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <?= $opcionesInicio; ?>
+                                                            <?= $opcionesInicio === 1
+                                                                ? 'opción'
+                                                                : 'opciones'; ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= (int) (
+                                                                $filaServ['minutosRestantes']
+                                                                ?? 0
+                                                            ); ?> min
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                class="badge bg-<?= htmlspecialchars(
+                                                                    $badgeFila
+                                                                ); ?>"
+                                                            >
+                                                                <?= htmlspecialchars(
+                                                                    (string) (
+                                                                        $filaServ['etiquetaEstado']
+                                                                        ?? ''
+                                                                    )
+                                                                ); ?>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="small text-muted mb-0 mt-2">
+                                        La capacidad máxima teórica no equivale a citas
+                                        simultáneas. Las opciones de inicio son alternativas;
+                                        al reservar una, las que se solapan dejan de estar
+                                        disponibles.
+                                    </p>
+                                </td>
+                            </tr>
+                        <?php elseif (
+                            is_array($resumenBloque)
+                            && !empty($resumenBloque['mensajeAlerta'])
+                        ): ?>
+                            <tr>
+                                <td colspan="4" class="bg-light small">
+                                    <i
+                                        class="bi <?= htmlspecialchars($iconoAlerta); ?>"
+                                        aria-hidden="true"
+                                    ></i>
+                                    <?= htmlspecialchars(
+                                        (string) $resumenBloque['mensajeAlerta']
+                                    ); ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
 
                     <?php endforeach; ?>
 

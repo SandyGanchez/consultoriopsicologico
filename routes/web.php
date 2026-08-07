@@ -123,6 +123,11 @@ return [
     'crearConsultorio'
 ],
 
+'/administrador/consultorio/editar' => [
+    AdministradorController::class,
+    'editarConsultorio'
+],
+
 '/administrador/incidencias' => [
     AdministradorController::class,
     'listarIncidencias'
@@ -189,6 +194,21 @@ return [
             'psicologos'
         ],
 
+        '/consultorio/pacientes' => [
+            ConsultorioController::class,
+            'pacientes'
+        ],
+
+        '/consultorio/pacientes/ver/{id}' => [
+            ConsultorioController::class,
+            'verPaciente'
+        ],
+
+        '/consultorio/pacientes/editar/{id}' => [
+            ConsultorioController::class,
+            'editarPaciente'
+        ],
+
         '/consultorio/psicologos/nuevo' => [
             ConsultorioController::class,
             'nuevoPsicologo'
@@ -199,6 +219,10 @@ return [
             'editarPsicologo'
         ],
 
+        /*
+        Legacy GET de toggle de estatus: no modifica estado.
+        Conservado solo para no romper bookmarks; redirige.
+        */
         '/consultorio/psicologos/cambiar-estatus' => [
             ConsultorioController::class,
             'cambiarEstatusPsicologo'
@@ -606,6 +630,21 @@ return [
             'cambiarEstadoCuenta'
         ],
 
+        '/administrador/consultorio/actualizar' => [
+            AdministradorController::class,
+            'actualizarConsultorio'
+        ],
+
+        '/administrador/consultorio/cambiar-estatus-institucional' => [
+            AdministradorController::class,
+            'cambiarEstatusInstitucional'
+        ],
+
+        '/administrador/consultorio/eliminar-sin-actividad' => [
+            AdministradorController::class,
+            'eliminarConsultorioSinActividad'
+        ],
+
         '/administrador/incidencias/{id}/actualizar' => [
             AdministradorController::class,
             'actualizarIncidencia'
@@ -701,6 +740,46 @@ return [
         '/consultorio/psicologos/actualizar' => [
             ConsultorioController::class,
             'actualizarPsicologo'
+        ],
+
+        '/consultorio/psicologos/cancelar-registro' => [
+            ConsultorioController::class,
+            'cancelarRegistroPsicologo'
+        ],
+
+        '/consultorio/psicologos/eliminar' => [
+            ConsultorioController::class,
+            'eliminarPsicologo'
+        ],
+
+        '/consultorio/psicologos/desactivar' => [
+            ConsultorioController::class,
+            'desactivarPsicologo'
+        ],
+
+        '/consultorio/psicologos/reactivar' => [
+            ConsultorioController::class,
+            'reactivarPsicologo'
+        ],
+
+        '/consultorio/pacientes/actualizar' => [
+            ConsultorioController::class,
+            'actualizarPaciente'
+        ],
+
+        '/consultorio/pacientes/eliminar' => [
+            ConsultorioController::class,
+            'eliminarPaciente'
+        ],
+
+        '/consultorio/pacientes/inactivar' => [
+            ConsultorioController::class,
+            'inactivarPaciente'
+        ],
+
+        '/consultorio/pacientes/reactivar' => [
+            ConsultorioController::class,
+            'reactivarPaciente'
         ],
 
         '/consultorio/horario/guardar' => [

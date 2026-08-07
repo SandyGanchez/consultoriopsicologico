@@ -542,6 +542,19 @@ function aplicarEstadoOperativoAEvento(evento, item) {
     }
 
     evento.setExtendedProp('puedeRegistrarResultado', !!item.puedeRegistrarAsistencia);
+    evento.setExtendedProp('puedeMarcarAsistida', !!item.puedeMarcarAsistida);
+    evento.setExtendedProp(
+        'puedeMarcarInasistencia',
+        !!item.puedeMarcarInasistencia
+    );
+    evento.setExtendedProp(
+        'motivoBloqueoAsistencia',
+        item.motivoBloqueoAsistencia || ''
+    );
+    evento.setExtendedProp(
+        'horaInicioLegible',
+        item.horaInicioLegible || ''
+    );
     evento.setExtendedProp('estadoClinico', item.estadoClinico || '');
     evento.setExtendedProp('mensajeClinico', item.mensajeClinico || '');
     evento.setExtendedProp('accionClinica', item.accionClinica || '');
@@ -606,6 +619,11 @@ function sincronizarContextoDetalleDesdeItem(item) {
 
     contextoDetalleCitaPsi.estado = item.estadoCita || contextoDetalleCitaPsi.estado;
     contextoDetalleCitaPsi.puedeRegistrarResultado = !!item.puedeRegistrarAsistencia;
+    contextoDetalleCitaPsi.puedeMarcarAsistida = !!item.puedeMarcarAsistida;
+    contextoDetalleCitaPsi.puedeMarcarInasistencia = !!item.puedeMarcarInasistencia;
+    contextoDetalleCitaPsi.motivoBloqueoAsistencia =
+        item.motivoBloqueoAsistencia || '';
+    contextoDetalleCitaPsi.horaInicioLegible = item.horaInicioLegible || '';
     contextoDetalleCitaPsi.estadoClinico = item.estadoClinico || '';
     contextoDetalleCitaPsi.mensajeClinico = item.mensajeClinico || '';
     contextoDetalleCitaPsi.accionClinica = item.accionClinica || '';
@@ -1528,6 +1546,10 @@ async function mostrarDetalleCitaPsi(evento) {
         servicio: props.servicio || '',
         estado,
         puedeRegistrarResultado: !!props.puedeRegistrarResultado,
+        puedeMarcarAsistida: !!props.puedeMarcarAsistida,
+        puedeMarcarInasistencia: !!props.puedeMarcarInasistencia,
+        motivoBloqueoAsistencia: props.motivoBloqueoAsistencia || '',
+        horaInicioLegible: props.horaInicioLegible || '',
         estadoClinico: props.estadoClinico || '',
         mensajeClinico: props.mensajeClinico || '',
         accionClinica: props.accionClinica || '',
@@ -1666,25 +1688,81 @@ function actualizarBloquesAsistenciaPsi(ctx) {
     enlaceCompletarDatos?.classList.add('d-none');
 
     if (ctx.estado === 'PROGRAMADA') {
-        if (ctx.puedeRegistrarResultado) {
-            if (mensaje) {
+        const puedeAsistida = !!ctx.puedeMarcarAsistida;
+        const puedeInasistencia = !!ctx.puedeMarcarInasistencia;
+        const puedeAlguna = puedeAsistida || puedeInasistencia;
+        const btnAsistida = document.getElementById('btnAbrirAsistidaPsi');
+        const btnInasistencia = document.getElementById(
+            'btnAbrirInasistenciaPsi'
+        );
+
+        if (mensaje) {
+            if (puedeAlguna) {
+                mensaje.textContent = puedeInasistencia
+                    ? 'Esta cita está pendiente de registrar asistencia.'
+                    : (ctx.motivoBloqueoAsistencia ||
+                        'Puedes registrar asistencia. La inasistencia estará disponible al finalizar el horario.');
+            } else {
                 mensaje.textContent =
-                    'Esta cita está pendiente de registrar asistencia.';
-                mensaje.classList.remove('d-none');
+                    ctx.motivoBloqueoAsistencia ||
+                    ctx.mensajeClinico ||
+                    'Podrás registrar la asistencia cuando comience la cita.';
             }
-            acciones?.classList.remove('d-none');
-            if (ctx.urlVerPaciente && enlaceVerPaciente) {
-                enlaceVerPaciente.href = ctx.urlVerPaciente;
-                enlaceVerPaciente.classList.remove('d-none');
-            }
-            if (ctx.urlCompletarDatos && enlaceCompletarDatos) {
-                enlaceCompletarDatos.href = ctx.urlCompletarDatos;
-                enlaceCompletarDatos.classList.remove('d-none');
-            }
-        } else if (mensaje) {
-            mensaje.textContent =
-                'Podrás registrar la asistencia cuando comience la cita.';
             mensaje.classList.remove('d-none');
+        }
+
+        if (puedeAlguna || ctx.motivoBloqueoAsistencia) {
+            acciones?.classList.remove('d-none');
+        }
+
+        if (btnAsistida) {
+            btnAsistida.disabled = !puedeAsistida;
+            btnAsistida.setAttribute(
+                'aria-disabled',
+                puedeAsistida ? 'false' : 'true'
+            );
+
+            const etiquetaAntesInicio =
+                !puedeAsistida
+                && !puedeInasistencia
+                && typeof ctx.motivoBloqueoAsistencia === 'string'
+                && ctx.motivoBloqueoAsistencia.includes('a partir de las')
+                && ctx.horaInicioLegible;
+
+            btnAsistida.textContent = etiquetaAntesInicio
+                ? 'Disponible a partir de las ' + ctx.horaInicioLegible
+                : 'Registrar asistencia';
+
+            if (!puedeAsistida && ctx.motivoBloqueoAsistencia) {
+                btnAsistida.title = ctx.motivoBloqueoAsistencia;
+            } else {
+                btnAsistida.removeAttribute('title');
+            }
+        }
+
+        if (btnInasistencia) {
+            btnInasistencia.disabled = !puedeInasistencia;
+            btnInasistencia.setAttribute(
+                'aria-disabled',
+                puedeInasistencia ? 'false' : 'true'
+            );
+            btnInasistencia.textContent = 'Registrar inasistencia';
+            if (!puedeInasistencia) {
+                btnInasistencia.title =
+                    ctx.motivoBloqueoAsistencia ||
+                    'La inasistencia solo puede registrarse después de finalizar el horario de la cita.';
+            } else {
+                btnInasistencia.removeAttribute('title');
+            }
+        }
+
+        if (ctx.urlVerPaciente && enlaceVerPaciente) {
+            enlaceVerPaciente.href = ctx.urlVerPaciente;
+            enlaceVerPaciente.classList.remove('d-none');
+        }
+        if (ctx.urlCompletarDatos && enlaceCompletarDatos) {
+            enlaceCompletarDatos.href = ctx.urlCompletarDatos;
+            enlaceCompletarDatos.classList.remove('d-none');
         }
         return;
     }
@@ -1753,6 +1831,30 @@ function iniciarAsistenciaCitaPsi() {
 
 function abrirConfirmacionAsistenciaPsi(accion) {
     if (!contextoDetalleCitaPsi) {
+        return;
+    }
+
+    if (
+        accion === 'ASISTIDA' &&
+        !contextoDetalleCitaPsi.puedeMarcarAsistida
+    ) {
+        mostrarToast(
+            'error',
+            contextoDetalleCitaPsi.motivoBloqueoAsistencia ||
+                'No es posible registrar la asistencia ahora.'
+        );
+        return;
+    }
+
+    if (
+        accion === 'INASISTENCIA' &&
+        !contextoDetalleCitaPsi.puedeMarcarInasistencia
+    ) {
+        mostrarToast(
+            'error',
+            contextoDetalleCitaPsi.motivoBloqueoAsistencia ||
+                'La inasistencia solo puede registrarse después de finalizar el horario de la cita.'
+        );
         return;
     }
 
@@ -1835,10 +1937,13 @@ async function enviarRegistroAsistenciaPsi(accion) {
         const datos = await respuesta.json();
 
         if (!datos?.ok) {
-            const tipoToast =
-                datos?.codigo === 'CITA_NO_INICIADA'
-                    ? 'warning'
-                    : 'error';
+            const tipoToast = [
+                'CITA_NO_INICIADA',
+                'CITA_DURANTE_SESION',
+                'CITA_DIA_CERRADO'
+            ].includes(datos?.codigo)
+                ? 'warning'
+                : 'error';
 
             mostrarToast(
                 tipoToast,
@@ -1865,6 +1970,10 @@ async function enviarRegistroAsistenciaPsi(accion) {
 
         contextoDetalleCitaPsi.estado = datos.estado || accion;
         contextoDetalleCitaPsi.puedeRegistrarResultado = false;
+        contextoDetalleCitaPsi.puedeMarcarAsistida = false;
+        contextoDetalleCitaPsi.puedeMarcarInasistencia = false;
+        contextoDetalleCitaPsi.motivoBloqueoAsistencia =
+            'Esta cita ya tiene un resultado registrado y no puede modificarse.';
         contextoDetalleCitaPsi.estadoClinico =
             datos.estadoClinico || '';
         contextoDetalleCitaPsi.mensajeClinico =

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Model;
+use PDO;
 
 class Paciente extends Model
 {
@@ -387,13 +388,8 @@ public function obtenerPerfilCompleto(
             $tiposPermitidos[$tipoMime];
 
         $directorio =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'perfiles';
+            \App\Config\Paths::publicPath() .
+            '/uploads/perfiles';
 
         if (
             !is_dir($directorio)
@@ -413,6 +409,12 @@ public function obtenerPerfilCompleto(
         if (!move_uploaded_file($foto['tmp_name'], $rutaDestino)) {
             throw new \RuntimeException(
                 'No fue posible guardar la fotografía.'
+            );
+        }
+
+        if (!is_file($rutaDestino)) {
+            throw new \RuntimeException(
+                'La fotografía no quedó almacenada correctamente.'
             );
         }
 
@@ -442,13 +444,8 @@ public function obtenerPerfilCompleto(
         }
 
         $directorio =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'perfiles';
+            \App\Config\Paths::publicPath() .
+            '/uploads/perfiles';
 
         $ruta = $directorio . DIRECTORY_SEPARATOR . $nombre;
         $realDir = realpath($directorio);

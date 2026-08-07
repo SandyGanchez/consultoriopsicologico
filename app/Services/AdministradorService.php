@@ -1123,4 +1123,257 @@ private function validarCorreosDisponibles(
         );
     }
 
+    /**
+     * Cambia únicamente EstatusCons (ACTIVO|INACTIVO|BLOQUEADO).
+     * No toca RolUsu, contraseñas ni datos clínicos.
+     */
+    public function cambiarEstatusInstitucional(
+        string $clvConsultorio,
+        string $nuevoEstatus
+    ): void {
+        $permitidos = ['ACTIVO', 'INACTIVO', 'BLOQUEADO'];
+        $nuevoEstatus = strtoupper(trim($nuevoEstatus));
+
+        if (!in_array($nuevoEstatus, $permitidos, true)) {
+            throw new RuntimeException(
+                'Estatus institucional no válido.'
+            );
+        }
+
+        $this->validarConsultorioExistente($clvConsultorio);
+
+        $stmt = $this->db->prepare(
+            'UPDATE consultorio
+             SET EstatusCons = :estatus
+             WHERE ClvCons = :clvCons'
+        );
+        $stmt->execute([
+            'estatus' => $nuevoEstatus,
+            'clvCons' => $clvConsultorio,
+        ]);
+    }
+
+    /**
+     * @return array{
+     *   puedeEliminar: bool,
+     *   psicologos: int,
+     *   pacientes: int,
+     *   citas: int,
+     *   historial: int,
+     *   pendienteActivacion: bool
+     * }
+     */
+    public function evaluarActividadConsultorio(string $clvConsultorio): array
+    {
+        $this->validarConsultorioExistente($clvConsultorio);
+
+        $stmtPsi = $this->db->prepare(
+            'SELECT COUNT(*) FROM psicologo WHERE ClvCons = :c'
+        );
+        $stmtPsi->execute(['c' => $clvConsultorio]);
+        $psicologos = (int) $stmtPsi->fetchColumn();
+
+        $stmtPac = $this->db->prepare(
+            'SELECT COUNT(*) FROM paciente WHERE ClvCons = :c'
+        );
+        $stmtPac->execute(['c' => $clvConsultorio]);
+        $pacientes = (int) $stmtPac->fetchColumn();
+
+        $stmtCita = $this->db->prepare(
+            'SELECT COUNT(*) FROM cita WHERE ClvCons = :c'
+        );
+        $stmtCita->execute(['c' => $clvConsultorio]);
+        $citas = (int) $stmtCita->fetchColumn();
+
+        $stmtHist = $this->db->prepare(
+            'SELECT COUNT(*) FROM historial_clinico WHERE ClvCons = :c'
+        );
+        $stmtHist->execute(['c' => $clvConsultorio]);
+        $historial = (int) $stmtHist->fetchColumn();
+
+        $pendiente = false;
+        try {
+            $cuenta = $this->resolverCuentaPrincipalUnica($clvConsultorio);
+            $pendiente =
+                (int) ($cuenta['RequiereCambioContrasena'] ?? 0) === 1
+                || $this->tieneActivacionPendiente((string) $cuenta['ClvUsu']);
+        } catch (Throwable $e) {
+            $pendiente = false;
+        }
+
+        $puedeEliminar =
+            $psicologos === 0
+            && $pacientes === 0
+            && $citas === 0
+            && $historial === 0;
+
+        return [
+            'puedeEliminar' => $puedeEliminar,
+            'psicologos' => $psicologos,
+            'pacientes' => $pacientes,
+            'citas' => $citas,
+            'historial' => $historial,
+            'pendienteActivacion' => $pendiente,
+        ];
+    }
+
+    /**
+     * Eliminación física solo sin actividad. Transaccional.
+     *
+     * @return array{ok: bool, mensaje: string}
+     */
+    public function eliminarConsultorioSinActividad(string $clvConsultorio): array
+    {
+        try {
+            $this->db->beginTransaction();
+
+            $stmtLock = $this->db->prepare(
+                'SELECT ClvCons, ClvDir
+                 FROM consultorio
+                 WHERE ClvCons = :c
+                 LIMIT 1
+                 FOR UPDATE'
+            );
+            $stmtLock->execute(['c' => $clvConsultorio]);
+            $cons = $stmtLock->fetch(PDO::FETCH_ASSOC);
+
+            if (!$cons) {
+                throw new RuntimeException('El consultorio no existe.');
+            }
+
+            $actividad = $this->evaluarActividadConsultorio($clvConsultorio);
+
+            if (!$actividad['puedeEliminar']) {
+                throw new RuntimeException(
+                    'No se puede eliminar: el consultorio tiene actividad asociada. '
+                    . 'Usa inactivar o bloquear.'
+                );
+            }
+
+            $cuenta = $this->resolverCuentaPrincipalUnica($clvConsultorio);
+            $clvUsu = (string) $cuenta['ClvUsu'];
+            $clvPer = (string) ($this->obtenerDatosRelacionados($clvConsultorio)['ClvPer'] ?? '');
+            $clvDir = (string) $cons['ClvDir'];
+
+            $this->db->prepare(
+                'DELETE FROM activacion_cuenta WHERE ClvUsu = :u'
+            )->execute(['u' => $clvUsu]);
+
+            if ($this->tablaExiste('recuperacion_password')) {
+                $this->db->prepare(
+                    'DELETE FROM recuperacion_password WHERE ClvUsu = :u'
+                )->execute(['u' => $clvUsu]);
+            }
+
+            if ($this->tablaExiste('notificacion')) {
+                $this->db->prepare(
+                    'DELETE FROM notificacion WHERE ClvUsu = :u'
+                )->execute(['u' => $clvUsu]);
+            }
+
+            $this->db->prepare(
+                'DELETE FROM horario_consultorio WHERE ClvCons = :c'
+            )->execute(['c' => $clvConsultorio]);
+
+            if ($this->tablaExiste('caracteristica')) {
+                $this->db->prepare(
+                    'DELETE FROM caracteristica WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            if ($this->tablaExiste('redsocial')) {
+                $this->db->prepare(
+                    'DELETE FROM redsocial WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            if ($this->tablaExiste('red_social_consultorio')) {
+                $this->db->prepare(
+                    'DELETE FROM red_social_consultorio WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            if ($this->tablaExiste('servicios')) {
+                $this->db->prepare(
+                    'DELETE FROM servicios WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            if ($this->tablaExiste('incidencia_soporte')) {
+                $this->db->prepare(
+                    'DELETE FROM incidencia_soporte WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            if ($this->tablaExiste('incidencia_acceso')) {
+                $this->db->prepare(
+                    'DELETE FROM incidencia_acceso WHERE ClvCons = :c'
+                )->execute(['c' => $clvConsultorio]);
+            }
+
+            $this->db->prepare(
+                'DELETE FROM consultorio_usuario WHERE ClvCons = :c'
+            )->execute(['c' => $clvConsultorio]);
+
+            $this->db->prepare(
+                'DELETE FROM consultorio WHERE ClvCons = :c'
+            )->execute(['c' => $clvConsultorio]);
+
+            $this->db->prepare(
+                'DELETE FROM usuario WHERE ClvUsu = :u AND RolUsu = \'CONSULTORIO\''
+            )->execute(['u' => $clvUsu]);
+
+            if ($clvPer !== '') {
+                $this->db->prepare(
+                    'DELETE FROM persona WHERE ClvPer = :p'
+                )->execute(['p' => $clvPer]);
+            }
+
+            if ($clvDir !== '') {
+                $stmtOtros = $this->db->prepare(
+                    'SELECT (
+                        (SELECT COUNT(*) FROM persona WHERE ClvDir = :d1)
+                      + (SELECT COUNT(*) FROM consultorio WHERE ClvDir = :d2)
+                     )'
+                );
+                $stmtOtros->execute(['d1' => $clvDir, 'd2' => $clvDir]);
+                if ((int) $stmtOtros->fetchColumn() === 0) {
+                    $this->db->prepare(
+                        'DELETE FROM direccion WHERE ClvDir = :d'
+                    )->execute(['d' => $clvDir]);
+                }
+            }
+
+            $this->db->commit();
+
+            return [
+                'ok' => true,
+                'mensaje' =>
+                    'El registro pendiente del consultorio fue eliminado correctamente.',
+            ];
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            return [
+                'ok' => false,
+                'mensaje' => $e->getMessage(),
+            ];
+        }
+    }
+
+    private function tablaExiste(string $tabla): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = :tabla'
+        );
+        $stmt->execute(['tabla' => $tabla]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
 }

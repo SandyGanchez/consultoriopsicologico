@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Config\Database;
+use App\Config\Paths;
 use App\Models\Caracteristica;
 use App\Models\Consultorio;
 use App\Models\Direccion;
@@ -233,15 +234,7 @@ class ConfiguracionConsultorioService
             $extension;
 
         $directorio =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'consultorios' .
-            DIRECTORY_SEPARATOR .
-            'portadas';
+            Paths::publicPath() . '/uploads/consultorios/portadas';
 
         if (
             !is_dir($directorio) &&
@@ -307,15 +300,7 @@ class ConfiguracionConsultorioService
         }
 
         $rutaCompleta =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'consultorios' .
-            DIRECTORY_SEPARATOR .
-            'portadas' .
+            Paths::publicPath() . '/uploads/consultorios/portadas' .
             DIRECTORY_SEPARATOR .
             $nombre;
 
@@ -378,13 +363,7 @@ class ConfiguracionConsultorioService
             $extension;
 
         $directorio =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'consultorios';
+            Paths::publicPath() . '/uploads/consultorios';
 
         if (
             !is_dir($directorio) &&
@@ -445,13 +424,7 @@ class ConfiguracionConsultorioService
         }
 
         $rutaCompleta =
-            dirname(__DIR__, 2) .
-            DIRECTORY_SEPARATOR .
-            'public' .
-            DIRECTORY_SEPARATOR .
-            'uploads' .
-            DIRECTORY_SEPARATOR .
-            'consultorios' .
+            Paths::publicPath() . '/uploads/consultorios' .
             DIRECTORY_SEPARATOR .
             $nombre;
 

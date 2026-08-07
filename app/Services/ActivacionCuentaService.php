@@ -187,6 +187,95 @@ class ActivacionCuentaService
     }
 
     /**
+     * Actualiza datos del especialista. Si está pendiente y cambia el correo,
+     * revoca tokens previos, genera uno nuevo y envía solo al correo nuevo.
+     *
+     * @param array<string, mixed> $datos
+     * @return array{ok: bool, mensaje: string, correoEnviado?: bool}
+     */
+    public function actualizarPsicologoConsultorio(
+        string $clvPsi,
+        string $clvCons,
+        array $datos,
+        string $clvUsuInvitador
+    ): array {
+        $psicologo = $this->psicologoModel->obtenerPorClave($clvPsi, $clvCons);
+
+        if (!$psicologo) {
+            return [
+                'ok' => false,
+                'mensaje' => 'El especialista no fue encontrado.',
+            ];
+        }
+
+        $correoAnterior = strtolower(trim((string) ($psicologo['CorreoUsu'] ?? '')));
+        $correoNuevo = strtolower(trim((string) ($datos['correo'] ?? '')));
+        $pendiente =
+            (int) ($psicologo['EstadoUsu'] ?? 0) === 0
+            && (int) ($psicologo['RequiereCambioContrasena'] ?? 0) === 1;
+        $correoCambio = $pendiente && $correoAnterior !== $correoNuevo;
+
+        try {
+            $this->psicologoModel->actualizar($clvPsi, $clvCons, $datos);
+        } catch (RuntimeException $e) {
+            return [
+                'ok' => false,
+                'mensaje' => $e->getMessage(),
+            ];
+        }
+
+        if (!$correoCambio) {
+            return [
+                'ok' => true,
+                'mensaje' => 'El especialista se actualizó correctamente.',
+            ];
+        }
+
+        $clvUsu = (string) $psicologo['ClvUsu'];
+        $tokenPlano = null;
+
+        try {
+            $this->db->beginTransaction();
+            $tokenPlano = $this->crearRegistroActivacion(
+                $clvUsu,
+                self::TIPO_PSICOLOGO,
+                $clvUsuInvitador,
+                0
+            );
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            return [
+                'ok' => false,
+                'mensaje' =>
+                    'El correo se actualizó, pero no fue posible regenerar la activación.',
+            ];
+        }
+
+        $nombre = trim(
+            ($datos['nombre'] ?? '') . ' ' .
+            ($datos['apellidoPaterno'] ?? '')
+        );
+
+        $correoEnviado = $this->enviarCorreoActivacionPsicologo(
+            $correoNuevo,
+            $nombre,
+            (string) $tokenPlano
+        );
+
+        return [
+            'ok' => true,
+            'correoEnviado' => $correoEnviado,
+            'mensaje' => $correoEnviado
+                ? 'Correo corregido. Se envió un nuevo enlace de activación al correo actualizado.'
+                : 'Correo corregido y token anterior revocado, pero no se pudo enviar el nuevo enlace.',
+        ];
+    }
+
+    /**
      * Alta transaccional paciente + primera cita + invitación.
      *
      * @return array<string, mixed>

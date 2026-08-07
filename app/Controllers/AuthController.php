@@ -30,13 +30,15 @@ class AuthController extends Controller
     }
 
     /**
-     * Datos seguros para la vista de login (consultorio único de la instalación).
-     * No exige PublicadoCons: el acceso interno debe funcionar en configuración.
+     * Datos seguros para vistas públicas de auth con identidad del consultorio
+     * (login / registro). Misma fuente que la instalación única.
      *
      * @return array<string, mixed>
      */
-    private function datosVistaLogin(): array
-    {
+    private function datosVistaAuthConsultorio(
+        string $titulo,
+        string $accionAuthActiva = ''
+    ): array {
         $identidad = $this->construirIdentidadConsultorioLogin();
         $consultorioNav = is_array($identidad['consultorio'] ?? null)
             ? $identidad['consultorio']
@@ -47,14 +49,42 @@ class AuthController extends Controller
             ];
 
         return [
-            'titulo' => 'Iniciar sesión',
+            'titulo' => $titulo,
             'consultorio' => $consultorioNav,
             'identidadConsultorio' => $identidad,
             'identidadPlataforma' => false,
             'esNavbarGlobal' => false,
             'esPortadaPlataforma' => false,
-            'correoIngresado' => (string) (Session::getFlash('login_correo') ?? '')
+            'accionAuthActiva' => $accionAuthActiva,
+            'correoIngresado' => ''
         ];
+    }
+
+    /**
+     * Datos seguros para la vista de login (consultorio único de la instalación).
+     * No exige PublicadoCons: el acceso interno debe funcionar en configuración.
+     *
+     * @return array<string, mixed>
+     */
+    private function datosVistaLogin(): array
+    {
+        $datos = $this->datosVistaAuthConsultorio('Iniciar sesión', 'login');
+        $datos['correoIngresado'] = (string) (Session::getFlash('login_correo') ?? '');
+
+        return $datos;
+    }
+
+    /**
+     * Datos de presentación para registro público (misma identidad que login).
+     *
+     * @return array<string, mixed>
+     */
+    private function datosVistaRegistro(): array
+    {
+        $datos = $this->datosVistaAuthConsultorio('Crear cuenta', 'registro');
+        unset($datos['correoIngresado']);
+
+        return $datos;
     }
 
     /**
@@ -413,7 +443,7 @@ public function saveTemporaryPassword(): void
         }
 
         $privacidad = new \App\Services\PrivacidadService();
-        $datos = $this->datosIdentidadVisualPublica();
+        $datos = $this->datosVistaRegistro();
         $datos['versionAviso'] = $privacidad->versionVigente();
 
         $this->view('auth/register', $datos);

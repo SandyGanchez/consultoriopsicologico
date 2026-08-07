@@ -11,24 +11,16 @@ use DateInterval;
 use DateTimeImmutable;
 
 /**
- * Coordinador de espacios disponibles para agendamiento (Etapa 4).
+ * Coordinador de espacios disponibles para agendamiento.
+ * Las fórmulas de bloque/candidatos/solape viven en CompatibilidadAgendaService.
  *
  * Intervalo de inicio entre candidatos: 30 minutos (decisión temporal;
  * ver docs/PENDIENTES_TECNICOS.md).
  */
 class AgendaService
 {
-    public const INTERVALO_INICIO_MINUTOS = 30;
-
-    private const MAPA_DIA_SEMANA = [
-        1 => 'LUNES',
-        2 => 'MARTES',
-        3 => 'MIERCOLES',
-        4 => 'JUEVES',
-        5 => 'VIERNES',
-        6 => 'SABADO',
-        7 => 'DOMINGO'
-    ];
+    public const INTERVALO_INICIO_MINUTOS =
+        CompatibilidadAgendaService::INTERVALO_INICIO_MINUTOS;
 
     private Psicologo $psicologoModel;
 
@@ -40,13 +32,23 @@ class AgendaService
 
     private Cita $citaModel;
 
-    public function __construct()
-    {
+    private CompatibilidadAgendaService $compatibilidad;
+
+    public function __construct(
+        ?CompatibilidadAgendaService $compatibilidad = null
+    ) {
         $this->psicologoModel = new Psicologo();
         $this->servicioModel = new Servicio();
         $this->horarioConsultorioModel = new HorarioConsultorio();
         $this->disponibilidadModel = new DisponibilidadPsicologo();
         $this->citaModel = new Cita();
+        $this->compatibilidad =
+            $compatibilidad ?? new CompatibilidadAgendaService(
+                $this->citaModel,
+                $this->disponibilidadModel,
+                $this->horarioConsultorioModel,
+                $this->servicioModel
+            );
     }
 
     public function calcularEspaciosDisponibles(
@@ -124,7 +126,7 @@ class AgendaService
         }
 
         $clvCons = $psicologo['ClvCons'];
-        $diaSemana = $this->obtenerDiaSemana($fechaObj);
+        $diaSemana = $this->compatibilidad->obtenerDiaSemana($fechaObj);
 
         $horarioConsultorio =
             $this->horarioConsultorioModel
@@ -157,10 +159,10 @@ class AgendaService
             );
         }
 
-        $aperturaConsultorio = $this->normalizarHora(
+        $aperturaConsultorio = $this->compatibilidad->normalizarHora(
             (string) $horarioConsultorio['HoraInicio']
         );
-        $cierreConsultorio = $this->normalizarHora(
+        $cierreConsultorio = $this->compatibilidad->normalizarHora(
             (string) $horarioConsultorio['HoraFin']
         );
 
@@ -170,83 +172,39 @@ class AgendaService
                 $fecha
             );
 
-        $candidatos = [];
-        $intervalo = new DateInterval(
-            'PT' . self::INTERVALO_INICIO_MINUTOS . 'M'
+        $ahora = new DateTimeImmutable(
+            'now',
+            $this->compatibilidad->zona()
         );
 
-        foreach ($bloques as $bloque) {
-            $inicioValido = $this->maxHora(
-                $this->normalizarHora(
-                    (string) $bloque['HoraInicio']
-                ),
-                $aperturaConsultorio
-            );
-            $finValido = $this->minHora(
-                $this->normalizarHora(
-                    (string) $bloque['HoraFin']
-                ),
-                $cierreConsultorio
-            );
+        $efectivos = $this->compatibilidad->normalizarBloquesEfectivos(
+            $bloques,
+            $aperturaConsultorio,
+            $cierreConsultorio
+        );
 
-            if ($inicioValido >= $finValido) {
+        $candidatos = [];
+
+        foreach ($efectivos as $efectivo) {
+            if ($duracion > $efectivo['minutos']) {
                 continue;
             }
 
-            $cursor = DateTimeImmutable::createFromFormat(
-                'Y-m-d H:i:s',
-                $fecha . ' ' . $inicioValido
+            $parciales = $this->compatibilidad->generarHorariosCandidatos(
+                $fecha,
+                $efectivo['inicio'],
+                $efectivo['fin'],
+                $duracion,
+                $citasProgramadas,
+                $ahora,
+                self::INTERVALO_INICIO_MINUTOS
             );
 
-            $limite = DateTimeImmutable::createFromFormat(
-                'Y-m-d H:i:s',
-                $fecha . ' ' . $finValido
-            );
-
-            if (!$cursor || !$limite) {
-                continue;
-            }
-
-            while (true) {
-                $finCandidato = $cursor->add(
-                    new DateInterval('PT' . $duracion . 'M')
-                );
-
-                if ($finCandidato > $limite) {
-                    break;
-                }
-
-                $inicioCandidato = $cursor->format('H:i:s');
-                $finCandidatoStr = $finCandidato->format('H:i:s');
-
-                if (
-                    $this->esHoraPasada(
-                        $fechaObj,
-                        $hoy,
-                        $cursor
-                    )
-                ) {
-                    $cursor = $cursor->add($intervalo);
-                    continue;
-                }
-
-                if (
-                    $this->solapaConCita(
-                        $inicioCandidato,
-                        $finCandidatoStr,
-                        $citasProgramadas
-                    )
-                ) {
-                    $cursor = $cursor->add($intervalo);
-                    continue;
-                }
-
-                $candidatos[$inicioCandidato] = [
-                    'valor' => $inicioCandidato,
-                    'texto' => substr($inicioCandidato, 0, 5)
+            foreach ($parciales as $espacio) {
+                $candidatos[$espacio['valor']] = [
+                    'valor' => $espacio['valor'],
+                    'texto' => $espacio['texto']
                 ];
-
-                $cursor = $cursor->add($intervalo);
             }
         }
 
@@ -254,7 +212,7 @@ class AgendaService
 
         usort(
             $espacios,
-            function (array $a, array $b): int {
+            static function (array $a, array $b): int {
                 return strcmp($a['valor'], $b['valor']);
             }
         );
@@ -383,7 +341,7 @@ class AgendaService
         string $fecha,
         string $horaInicio
     ): array {
-        $horaNormalizada = $this->normalizarHora(
+        $horaNormalizada = $this->compatibilidad->normalizarHora(
             trim($horaInicio)
         );
 
@@ -424,8 +382,10 @@ class AgendaService
         if (!$espacioValido) {
             return [
                 'ok' => false,
+                'codigo' => 'HORARIO_OCUPADO',
                 'mensaje' =>
-                    'El horario seleccionado no está disponible.'
+                    'Este horario acaba de dejar de estar disponible. '
+                    . 'Selecciona otro espacio.'
             ];
         }
 
@@ -488,97 +448,12 @@ class AgendaService
     public function obtenerDiaSemana(
         DateTimeImmutable $fecha
     ): string {
-        $numeroDia = (int) $fecha->format('N');
-
-        return self::MAPA_DIA_SEMANA[$numeroDia];
+        return $this->compatibilidad->obtenerDiaSemana($fecha);
     }
 
-    private function solapaConCita(
-        string $inicioCandidato,
-        string $finCandidato,
-        array $citas
-    ): bool {
-        foreach ($citas as $cita) {
-            $inicioCita = $this->normalizarHora(
-                (string) $cita['HraInicioCita']
-            );
-            $finCita = $this->normalizarHoraFinCita($cita);
-
-            if (
-                $inicioCandidato < $finCita &&
-                $finCandidato > $inicioCita
-            ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function normalizarHoraFinCita(array $cita): string
+    public function compatibilidad(): CompatibilidadAgendaService
     {
-        $fin = trim((string) ($cita['HraFinCita'] ?? ''));
-
-        if ($fin !== '' && $fin !== '00:00:00') {
-            return $this->normalizarHora($fin);
-        }
-
-        $inicio = $this->normalizarHora(
-            (string) $cita['HraInicioCita']
-        );
-        $duracion = (int) ($cita['DuracionAplicadaMin'] ?? 0);
-
-        if ($duracion <= 0) {
-            $duracion = 60;
-        }
-
-        $base = DateTimeImmutable::createFromFormat(
-            'H:i:s',
-            $inicio
-        );
-
-        if (!$base) {
-            return $inicio;
-        }
-
-        return $base
-            ->add(new DateInterval('PT' . $duracion . 'M'))
-            ->format('H:i:s');
-    }
-
-    private function esHoraPasada(
-        DateTimeImmutable $fechaConsulta,
-        DateTimeImmutable $hoy,
-        DateTimeImmutable $inicioCandidato
-    ): bool {
-        if ($fechaConsulta->format('Y-m-d') !== $hoy->format('Y-m-d')) {
-            return false;
-        }
-
-        $ahora = new DateTimeImmutable('now');
-
-        return $inicioCandidato <= $ahora;
-    }
-
-    private function maxHora(string $a, string $b): string
-    {
-        return strcmp($a, $b) >= 0 ? $a : $b;
-    }
-
-    private function minHora(string $a, string $b): string
-    {
-        return strcmp($a, $b) <= 0 ? $a : $b;
-    }
-
-    private function normalizarHora(string $hora): string
-    {
-        $hora = trim($hora);
-
-        if (strlen($hora) === 5) {
-            return $hora . ':00';
-        }
-
-        return substr($hora, 0, 8);
+        return $this->compatibilidad;
     }
 
     private function respuestaExito(
