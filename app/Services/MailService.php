@@ -873,13 +873,34 @@ HTML;
 
     public function enviarConfirmacionCitaPaciente(array $contexto): void
     {
+        $correo = trim((string) ($contexto['CorreoPaciente'] ?? ''));
+        if ($correo === '') {
+            $correo = trim((string) ($contexto['CorreoCreador']
+                ?? $contexto['CorreoResponsable']
+                ?? ''));
+        }
+
         $this->enviarPlantillaCita(
-            (string) ($contexto['CorreoPaciente'] ?? ''),
+            $correo,
             trim((string) ($contexto['NombrePaciente'] ?? '')),
-            'Confirmación de tu cita — '
-                . trim((string) ($contexto['NombreCons'] ?? 'Consultorio')),
-            $this->cuerpoConfirmacionPaciente($contexto),
-            $this->textoConfirmacionPaciente($contexto)
+            '❗Importante: verifica los detalles de tu cita',
+            $this->cuerpoConfirmacionVisual($contexto, 'PACIENTE'),
+            $this->textoConfirmacionPaciente($contexto),
+            $this->adjuntoIcsCita($contexto),
+            $contexto
+        );
+    }
+
+    public function enviarConfirmacionCitaResponsable(array $contexto): void
+    {
+        $this->enviarPlantillaCita(
+            (string) ($contexto['CorreoResponsable'] ?? ''),
+            trim((string) ($contexto['NombreResponsable'] ?? '')),
+            '❗Importante: verifica los detalles de tu cita',
+            $this->cuerpoConfirmacionVisual($contexto, 'RESPONSABLE'),
+            $this->textoConfirmacionResponsable($contexto),
+            $this->adjuntoIcsCita($contexto),
+            $contexto
         );
     }
 
@@ -897,6 +918,30 @@ HTML;
         );
     }
 
+    /**
+     * Vista previa HTML (pruebas / captura). No envía SMTP.
+     *
+     * @param array<string, mixed> $contexto
+     */
+    public function previsualizarConfirmacionCitaHtml(
+        array $contexto,
+        string $rol = 'PACIENTE'
+    ): string {
+        $rol = strtoupper(trim($rol));
+        $fromName = (string) Config::get('MAIL_FROM_NAME', 'PsicoMatch');
+        $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $interno = $this->cuerpoConfirmacionVisual(
+            $contexto,
+            $rol === 'RESPONSABLE' ? 'RESPONSABLE' : 'PACIENTE'
+        );
+
+        return $this->envolverHtmlConfirmacionVisual(
+            $esc($fromName),
+            $contexto,
+            $interno
+        );
+    }
+
     public function enviarRecordatorioCitaPaciente(array $contexto): void
     {
         $this->enviarPlantillaCita(
@@ -906,6 +951,18 @@ HTML;
                 . trim((string) ($contexto['NombreCons'] ?? 'Consultorio')),
             $this->cuerpoRecordatorioPaciente($contexto),
             $this->textoRecordatorioPaciente($contexto)
+        );
+    }
+
+    public function enviarRecordatorioCitaResponsable(array $contexto): void
+    {
+        $this->enviarPlantillaCita(
+            (string) ($contexto['CorreoResponsable'] ?? ''),
+            trim((string) ($contexto['NombreResponsable'] ?? '')),
+            'Recordatorio de cita (dependiente) — '
+                . trim((string) ($contexto['NombreCons'] ?? 'Consultorio')),
+            $this->cuerpoRecordatorioResponsable($contexto),
+            $this->textoRecordatorioResponsable($contexto)
         );
     }
 
@@ -923,12 +980,17 @@ HTML;
         );
     }
 
+    /**
+     * @param array{contenido: string, filename: string}|null $adjuntoIcs
+     */
     private function enviarPlantillaCita(
         string $correo,
         string $nombre,
         string $asunto,
         string $htmlInterno,
-        string $altBody
+        string $altBody,
+        ?array $adjuntoIcs = null,
+        ?array $contextoVisual = null
     ): void {
         $correo = trim($correo);
         if ($correo === '' || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
@@ -943,12 +1005,53 @@ HTML;
             $mail->addAddress($correo, $nombre);
             $mail->isHTML(true);
             $mail->Subject = $asunto;
-            $mail->Body = $this->envolverHtmlCita($esc($fromName), $htmlInterno);
+            if (is_array($contextoVisual)) {
+                $mail->Body = $this->envolverHtmlConfirmacionVisual(
+                    $esc($fromName),
+                    $contextoVisual,
+                    $htmlInterno
+                );
+            } else {
+                $mail->Body = $this->envolverHtmlCita($esc($fromName), $htmlInterno);
+            }
             $mail->AltBody = $altBody;
+
+            if (
+                is_array($adjuntoIcs)
+                && trim((string) ($adjuntoIcs['contenido'] ?? '')) !== ''
+                && trim((string) ($adjuntoIcs['filename'] ?? '')) !== ''
+            ) {
+                $mail->addStringAttachment(
+                    (string) $adjuntoIcs['contenido'],
+                    (string) $adjuntoIcs['filename'],
+                    PHPMailer::ENCODING_BASE64,
+                    'text/calendar; charset=UTF-8; method=PUBLISH'
+                );
+            }
+
             $mail->send();
         } catch (MailException $e) {
             error_log('Error PHPMailer correo cita: envío fallido');
             throw new RuntimeException('No se pudo enviar el correo de la cita.');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $contexto
+     * @return array{contenido: string, filename: string}|null
+     */
+    private function adjuntoIcsCita(array $contexto): ?array
+    {
+        $clvCita = trim((string) ($contexto['ClvCita'] ?? ''));
+        if ($clvCita === '') {
+            return null;
+        }
+
+        try {
+            return (new IcsCitaService())->generarParaCita($clvCita);
+        } catch (Throwable $e) {
+            error_log('MailService: no se pudo generar ICS de cita.');
+            return null;
         }
     }
 
@@ -957,7 +1060,7 @@ HTML;
         return <<<HTML
 <!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:30px 15px;background:#f4f8f6;font-family:Arial,Helvetica,sans-serif;color:#3f4942;">
 <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 12px 40px rgba(101,113,102,.15);">
 <div style="padding:28px;background:linear-gradient(135deg,#DAEBE3,#99CDD8);text-align:center;">
@@ -970,6 +1073,55 @@ HTML;
 Mensaje automático. No respondas este correo.
 </div>
 </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * @param array<string, mixed> $contexto
+     */
+    private function envolverHtmlConfirmacionVisual(
+        string $fromNameEsc,
+        array $contexto,
+        string $contenido
+    ): string {
+        $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $consultorio = $esc(trim((string) ($contexto['NombreCons'] ?? 'Consultorio')));
+        $logoUrl = trim((string) ($contexto['UrlLogoConsultorio'] ?? ''));
+        $logoHtml = '';
+        if ($logoUrl !== '' && filter_var($logoUrl, FILTER_VALIDATE_URL)) {
+            $logoEsc = $esc($logoUrl);
+            $logoHtml = '<img src="' . $logoEsc . '" alt="' . $consultorio
+                . '" width="72" height="72" style="display:block;margin:0 auto 12px;border-radius:16px;object-fit:cover;border:0;">';
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cita confirmada</title>
+</head>
+<body style="margin:0;padding:0;background:#eef5f2;font-family:Arial,Helvetica,sans-serif;color:#3f4942;-webkit-text-size-adjust:100%;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef5f2;padding:24px 12px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 36px rgba(70,81,73,.12);">
+<tr><td style="padding:28px 24px 20px;background:linear-gradient(135deg,#DAEBE3 0%,#99CDD8 100%);text-align:center;">
+{$logoHtml}
+<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5a665e;margin-bottom:6px;">{$fromNameEsc}</div>
+<div style="font-size:15px;font-weight:bold;color:#465149;">{$consultorio}</div>
+</td></tr>
+<tr><td style="padding:28px 24px 8px;">
+{$contenido}
+</td></tr>
+<tr><td style="padding:18px 24px 28px;background:#f7faf8;text-align:center;font-size:11px;line-height:1.6;color:#89938c;">
+Mensaje automático de {$fromNameEsc}. No respondas este correo.
+</td></tr>
+</table>
+</td></tr>
+</table>
 </body>
 </html>
 HTML;
@@ -1042,33 +1194,174 @@ HTML;
             . '</div>';
     }
 
-    private function cuerpoConfirmacionPaciente(array $contexto): string
+    /**
+     * Plantilla HTML responsive de confirmación (PACIENTE / RESPONSABLE).
+     *
+     * @param array<string, mixed> $contexto
+     */
+    private function cuerpoConfirmacionVisual(array $contexto, string $rol): string
     {
         $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
-        $nombre = $esc(trim((string) ($contexto['NombrePaciente'] ?? '')));
-        $url = $esc((string) ($contexto['UrlLogin'] ?? ''));
+        $rol = strtoupper(trim($rol));
+
+        $fechaLarga = $esc(trim((string) (
+            $contexto['FechaCitaLarga'] ?? $this->formatearFechaCita($contexto)
+        )));
+        $horaIni = $esc(trim((string) (
+            $contexto['HoraInicioFmt'] ?? $this->formatearHoraCita($contexto)
+        )));
+        $horaFin = $esc(trim((string) (
+            $contexto['HoraFinFmt'] ?? substr((string) ($contexto['HraFinCita'] ?? ''), 0, 5)
+        )));
+        $rangoHora = $horaFin !== '' ? "{$horaIni} – {$horaFin}" : $horaIni;
+
+        $paciente = $esc(trim((string) ($contexto['NombrePaciente'] ?? '')));
+        $psicologo = $esc(trim((string) ($contexto['NombrePsicologo'] ?? '')));
+        $servicio = $esc(trim((string) ($contexto['NombreServicio'] ?? '')));
+        $consultorio = $esc(trim((string) ($contexto['NombreCons'] ?? '')));
+        $direccion = $esc(trim((string) ($contexto['DireccionCompleta'] ?? '')));
+        $telefono = $esc(trim((string) ($contexto['TelefonoCons'] ?? '')));
+        $responsable = $esc(trim((string) ($contexto['NombreResponsable'] ?? '')));
+        $parentesco = $esc(trim((string) ($contexto['Parentesco'] ?? '')));
+
+        $urlCal = trim((string) ($contexto['UrlGoogleCalendar'] ?? ''));
+        $urlMaps = trim((string) ($contexto['UrlComoLlegar'] ?? ''));
+        $urlCalEsc = $esc($urlCal);
+        $urlMapsEsc = $esc($urlMaps);
+
+        $bloqueDependiente = '';
+        if ($rol === 'RESPONSABLE' || !empty($contexto['EsReservaDependiente'])) {
+            $bloqueDependiente = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#FDE8D3;border-radius:16px;">'
+                . '<tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;color:#465149;">'
+                . '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8a7a68;margin-bottom:8px;">Reservación</div>'
+                . '<div style="margin:0 0 6px;"><strong>Paciente:</strong> ' . $paciente . '</div>'
+                . '<div style="margin:0 0 6px;"><strong>Reservación realizada por:</strong> '
+                . ($responsable !== '' ? $responsable : '—') . '</div>'
+                . ($parentesco !== ''
+                    ? '<div style="margin:0;"><strong>Parentesco:</strong> ' . $parentesco . '</div>'
+                    : '')
+                . '</td></tr></table>';
+        }
+
+        $botones = '';
+        if ($urlCal !== '') {
+            $botones .= '<a href="' . $urlCalEsc . '" style="display:inline-block;margin:6px 6px 6px 0;padding:13px 20px;border-radius:14px;background:#465149;color:#ffffff;font-weight:bold;text-decoration:none;font-size:14px;">Agregar al calendario</a>';
+        }
+        if ($urlMaps !== '') {
+            $botones .= '<a href="' . $urlMapsEsc . '" style="display:inline-block;margin:6px 0;padding:13px 20px;border-radius:14px;background:#99CDD8;color:#465149;font-weight:bold;text-decoration:none;font-size:14px;">Cómo llegar</a>';
+        }
+
+        $fila = static function (string $etiqueta, string $valor) use ($esc): string {
+            if (trim($valor) === '') {
+                return '';
+            }
+            return '<tr>'
+                . '<td style="padding:10px 0;border-bottom:1px solid #e8efeb;font-size:13px;color:#7a857e;width:38%;vertical-align:top;">'
+                . $esc($etiqueta) . '</td>'
+                . '<td style="padding:10px 0;border-bottom:1px solid #e8efeb;font-size:14px;color:#3f4942;font-weight:bold;vertical-align:top;">'
+                . $valor . '</td></tr>';
+        };
+
+        $detalle = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 22px;">'
+            . $fila('Especialista', $psicologo)
+            . $fila('Servicio', $servicio)
+            . $fila('Fecha', $fechaLarga)
+            . $fila('Hora', $rangoHora)
+            . $fila('Consultorio', $consultorio)
+            . $fila('Dirección', $direccion)
+            . ($telefono !== '' ? $fila('Teléfono', $telefono) : '')
+            . '</table>';
+
+        $saludo = $rol === 'RESPONSABLE' && $responsable !== ''
+            ? $responsable
+            : $paciente;
+
+        return <<<HTML
+<div style="text-align:center;margin:0 0 8px;">
+<div style="display:inline-block;padding:6px 14px;border-radius:999px;background:#DAEBE3;color:#465149;font-size:12px;font-weight:bold;letter-spacing:.04em;">Cita confirmada</div>
+</div>
+<p style="margin:16px 0 6px;text-align:center;font-size:15px;color:#5a665e;">Hola <strong style="color:#465149;">{$saludo}</strong></p>
+<div style="text-align:center;margin:18px 0 6px;">
+<div style="font-size:22px;line-height:1.35;font-weight:bold;color:#465149;">{$fechaLarga}</div>
+<div style="font-size:34px;line-height:1.2;font-weight:bold;color:#2f3a34;margin-top:8px;">{$horaIni}</div>
+<div style="font-size:16px;color:#5a665e;margin-top:10px;">Cita para <strong style="color:#465149;">{$paciente}</strong></div>
+</div>
+{$bloqueDependiente}
+{$detalle}
+<div style="text-align:center;margin:8px 0 4px;">
+{$botones}
+</div>
+<p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#89938c;text-align:center;">
+También adjuntamos un archivo .ics para Outlook, Apple Calendar y otros calendarios.
+</p>
+HTML;
+    }
+
+    private function textoConfirmacionResponsable(array $contexto): string
+    {
+        return "Hola " . trim((string) ($contexto['NombreResponsable'] ?? '')) . ".\n\n"
+            . "Cita confirmada para: "
+            . trim((string) ($contexto['NombrePaciente'] ?? '')) . ".\n"
+            . "Reservación realizada por: "
+            . trim((string) ($contexto['NombreResponsable'] ?? '')) . ".\n"
+            . (trim((string) ($contexto['Parentesco'] ?? '')) !== ''
+                ? 'Parentesco: ' . trim((string) $contexto['Parentesco']) . ".\n"
+                : '')
+            . "Especialista: " . trim((string) ($contexto['NombrePsicologo'] ?? '')) . "\n"
+            . "Servicio: " . trim((string) ($contexto['NombreServicio'] ?? '')) . "\n"
+            . "Fecha: " . trim((string) ($contexto['FechaCitaLarga'] ?? $this->formatearFechaCita($contexto))) . "\n"
+            . "Hora: " . $this->formatearHoraCita($contexto) . "\n"
+            . "Consultorio: " . trim((string) ($contexto['NombreCons'] ?? '')) . "\n"
+            . "Calendario: " . trim((string) ($contexto['UrlGoogleCalendar'] ?? '')) . "\n"
+            . "Cómo llegar: " . trim((string) ($contexto['UrlComoLlegar'] ?? '')) . "\n";
+    }
+
+    private function cuerpoRecordatorioResponsable(array $contexto): string
+    {
+        $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $responsable = $esc(trim((string) ($contexto['NombreResponsable'] ?? '')));
+        $paciente = $esc(trim((string) ($contexto['NombrePaciente'] ?? '')));
         $bloque = $this->bloqueDatosOperativos($contexto, true);
 
         return <<<HTML
-<p>Hola <strong>{$nombre}</strong>:</p>
-<p style="line-height:1.7;">Tu cita ha sido registrada con estado <strong>Programada</strong>.</p>
+<p>Hola <strong>{$responsable}</strong>:</p>
+<p style="line-height:1.7;">
+Te recordamos la cita próxima de <strong>{$paciente}</strong>.
+</p>
+<p style="line-height:1.7;margin:0 0 12px;">
+<strong>Responsable de la reservación:</strong> {$responsable}
+</p>
 {$bloque}
-<div style="margin-top:28px;text-align:center;">
-<a href="{$url}" style="display:inline-block;padding:13px 24px;border-radius:14px;background:#99CDD8;color:#465149;font-weight:bold;text-decoration:none;">Iniciar sesión</a>
-</div>
 HTML;
+    }
+
+    private function textoRecordatorioResponsable(array $contexto): string
+    {
+        return "Hola " . trim((string) ($contexto['NombreResponsable'] ?? '')) . ".\n\n"
+            . "Recordatorio de cita para: "
+            . trim((string) ($contexto['NombrePaciente'] ?? '')) . ".\n"
+            . "Responsable: "
+            . trim((string) ($contexto['NombreResponsable'] ?? '')) . ".\n"
+            . "Especialista: " . trim((string) ($contexto['NombrePsicologo'] ?? '')) . "\n"
+            . "Servicio: " . trim((string) ($contexto['NombreServicio'] ?? '')) . "\n"
+            . "Fecha: " . $this->formatearFechaCita($contexto) . "\n"
+            . "Hora: " . $this->formatearHoraCita($contexto) . "\n"
+            . "Consultorio: " . trim((string) ($contexto['NombreCons'] ?? '')) . "\n";
     }
 
     private function textoConfirmacionPaciente(array $contexto): string
     {
         return "Hola " . trim((string) ($contexto['NombrePaciente'] ?? '')) . ".\n\n"
-            . "Tu cita ha sido registrada con estado Programada.\n"
+            . "Cita confirmada.\n"
+            . "Cita para: " . trim((string) ($contexto['NombrePaciente'] ?? '')) . "\n"
             . "Especialista: " . trim((string) ($contexto['NombrePsicologo'] ?? '')) . "\n"
             . "Servicio: " . trim((string) ($contexto['NombreServicio'] ?? '')) . "\n"
-            . "Fecha: " . $this->formatearFechaCita($contexto) . " "
-            . $this->formatearHoraCita($contexto) . "\n"
+            . "Fecha: " . trim((string) ($contexto['FechaCitaLarga'] ?? $this->formatearFechaCita($contexto))) . "\n"
+            . "Hora: " . $this->formatearHoraCita($contexto) . "\n"
             . "Consultorio: " . trim((string) ($contexto['NombreCons'] ?? '')) . "\n"
-            . "Ingresa en: " . (string) ($contexto['UrlLogin'] ?? '') . "\n";
+            . "Dirección: " . trim((string) ($contexto['DireccionCompleta'] ?? '')) . "\n"
+            . "Calendario: " . trim((string) ($contexto['UrlGoogleCalendar'] ?? '')) . "\n"
+            . "Cómo llegar: " . trim((string) ($contexto['UrlComoLlegar'] ?? '')) . "\n";
     }
 
     private function cuerpoConfirmacionPsicologo(array $contexto): string

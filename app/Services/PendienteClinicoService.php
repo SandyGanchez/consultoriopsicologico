@@ -356,8 +356,8 @@ class PendienteClinicoService
                     s.NombreServicio
                 FROM cita c
                 INNER JOIN paciente pac ON pac.ClvPac = c.ClvPac
-                INNER JOIN usuario u ON u.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = u.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario u ON u.ClvUsu = pac.ClvUsu
                 INNER JOIN servicios s ON s.ClvServ = c.ClvServ
                 WHERE c.ClvPsi = :clvPsi
                   AND c.ClvCons = :clvCons
@@ -764,8 +764,8 @@ class PendienteClinicoService
                     s.NombreServicio
                 FROM cita c
                 INNER JOIN paciente pac ON pac.ClvPac = c.ClvPac
-                INNER JOIN usuario u ON u.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = u.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario u ON u.ClvUsu = pac.ClvUsu
                 INNER JOIN servicios s ON s.ClvServ = c.ClvServ
                 WHERE c.ClvPsi = :clvPsi
                   AND c.ClvCons = :clvCons
@@ -826,8 +826,8 @@ class PendienteClinicoService
                 INNER JOIN paciente pac
                     ON pac.ClvPac = c.ClvPac
                    AND pac.ClvCons = c.ClvCons
-                INNER JOIN usuario u ON u.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = u.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario u ON u.ClvUsu = pac.ClvUsu
                 WHERE c.ClvPsi = :clvPsi
                   AND c.ClvCons = :clvCons
                   AND c.EstadoCita = 'ASISTIDA'
@@ -890,8 +890,8 @@ class PendienteClinicoService
                    AND h.ClvCons = c.ClvCons
                    AND h.ClvPsi = c.ClvPsi
                 INNER JOIN paciente pac ON pac.ClvPac = c.ClvPac
-                INNER JOIN usuario u ON u.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = u.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario u ON u.ClvUsu = pac.ClvUsu
                 INNER JOIN servicios s ON s.ClvServ = c.ClvServ
                 WHERE c.ClvPsi = :clvPsi
                   AND c.ClvCons = :clvCons

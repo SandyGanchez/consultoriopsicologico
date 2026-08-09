@@ -85,12 +85,17 @@ class CorreoCitaService
             );
         }
 
-        $clvUsuPac = (string) ($contexto['ClvUsuPaciente'] ?? '');
-        $clvUsuPsi = (string) ($contexto['ClvUsuPsicologo'] ?? '');
+        $clvUsuPac = trim((string) ($contexto['ClvUsuPaciente'] ?? ''));
+        $clvUsuPsi = trim((string) ($contexto['ClvUsuPsicologo'] ?? ''));
+        $clvUsuCreador = trim((string) ($contexto['ClvUsuCreador'] ?? ''));
+        $origen = strtoupper(trim((string) ($contexto['OrigenCita'] ?? 'PACIENTE')));
+        $correoResponsable = trim((string) ($contexto['CorreoResponsable'] ?? ''));
+        $correoPaciente = trim((string) ($contexto['CorreoPaciente'] ?? ''));
 
-        if ($clvUsuPac === '' || $clvUsuPsi === '') {
+        // Psicólogo sigue siendo obligatorio.
+        if ($clvUsuPsi === '') {
             throw new RuntimeException(
-                'No fue posible resolver los destinatarios de la cita.'
+                'No fue posible resolver el destinatario psicólogo de la cita.'
             );
         }
 
@@ -104,28 +109,67 @@ class CorreoCitaService
         $ahora = $this->ahora();
         $omitirPaciente = !empty($opciones['omitirConfirmacionPaciente']);
 
-        if ($omitirPaciente) {
+        // RESPONSABLE: NUNCA paciente.ClvUsu del dependiente.
+        $esReservaResponsable = $origen === 'RESPONSABLE'
+            || ($clvUsuPac === '' && $clvUsuCreador !== '');
+
+        // PACIENTE (propia): destinatario = ClvUsuCreador (fallback legado: ClvUsu paciente).
+        $destinoPaciente = $clvUsuCreador !== '' ? $clvUsuCreador : $clvUsuPac;
+
+        if ($esReservaResponsable) {
+            if ($clvUsuCreador === '' || $correoResponsable === '') {
+                throw new RuntimeException(
+                    'No fue posible resolver el correo del responsable de la reserva.'
+                );
+            }
+            if (!$this->rolResponsableSoportado()) {
+                throw new RuntimeException(
+                    'correo_cita no admite RolDestinatario=RESPONSABLE. '
+                    . 'Aplica la migración 20260809_cita_responsable en este entorno.'
+                );
+            }
+
             $this->model->insertarIdempotente([
                 'ClvCita' => $clvCita,
-                'ClvUsuDestino' => $clvUsuPac,
+                'ClvUsuDestino' => $clvUsuCreador,
                 'TipoCorreo' => 'CONFIRMACION',
-                'RolDestinatario' => 'PACIENTE',
-                'FechaProgramada' => $ahora->format('Y-m-d H:i:s'),
-                'EstadoCorreo' => 'OMITIDO',
-                'MotivoOmision' => (string) (
-                    $opciones['motivoOmitirConfirmacionPaciente']
-                    ?? self::MOTIVO_ACTIVACION
-                )
-            ]);
-        } else {
-            $this->model->insertarIdempotente([
-                'ClvCita' => $clvCita,
-                'ClvUsuDestino' => $clvUsuPac,
-                'TipoCorreo' => 'CONFIRMACION',
-                'RolDestinatario' => 'PACIENTE',
+                'RolDestinatario' => 'RESPONSABLE',
                 'FechaProgramada' => $ahora->format('Y-m-d H:i:s'),
                 'EstadoCorreo' => 'PENDIENTE'
             ]);
+        } elseif ($destinoPaciente !== '') {
+            $correoDestinoPac = $clvUsuCreador !== ''
+                ? ($correoResponsable !== '' ? $correoResponsable : $correoPaciente)
+                : $correoPaciente;
+            if ($correoDestinoPac === '' && !$omitirPaciente) {
+                throw new RuntimeException(
+                    'No fue posible resolver el correo del paciente de la cita.'
+                );
+            }
+
+            if ($omitirPaciente) {
+                $this->model->insertarIdempotente([
+                    'ClvCita' => $clvCita,
+                    'ClvUsuDestino' => $destinoPaciente,
+                    'TipoCorreo' => 'CONFIRMACION',
+                    'RolDestinatario' => 'PACIENTE',
+                    'FechaProgramada' => $ahora->format('Y-m-d H:i:s'),
+                    'EstadoCorreo' => 'OMITIDO',
+                    'MotivoOmision' => (string) (
+                        $opciones['motivoOmitirConfirmacionPaciente']
+                        ?? self::MOTIVO_ACTIVACION
+                    )
+                ]);
+            } else {
+                $this->model->insertarIdempotente([
+                    'ClvCita' => $clvCita,
+                    'ClvUsuDestino' => $destinoPaciente,
+                    'TipoCorreo' => 'CONFIRMACION',
+                    'RolDestinatario' => 'PACIENTE',
+                    'FechaProgramada' => $ahora->format('Y-m-d H:i:s'),
+                    'EstadoCorreo' => 'PENDIENTE'
+                ]);
+            }
         }
 
         $this->model->insertarIdempotente([
@@ -142,7 +186,21 @@ class CorreoCitaService
         $fechaProgRecordatorio = $this->recordatorioService
             ->fechaProgramadaRecordatorio($inicio, $ahora);
 
-        foreach (['PACIENTE' => $clvUsuPac, 'PSICOLOGO' => $clvUsuPsi] as $rol => $clvUsu) {
+        $destinos = ['PSICOLOGO' => $clvUsuPsi];
+        if ($esReservaResponsable && $clvUsuCreador !== '') {
+            $destinos = ['RESPONSABLE' => $clvUsuCreador] + $destinos;
+        } elseif ($destinoPaciente !== '') {
+            $destinos = ['PACIENTE' => $destinoPaciente] + $destinos;
+        }
+
+        foreach ($destinos as $rol => $clvUsu) {
+            if ($clvUsu === '') {
+                continue;
+            }
+            if ($rol === 'RESPONSABLE' && !$this->rolResponsableSoportado()) {
+                continue;
+            }
+
             if ($fechaProgRecordatorio === null) {
                 $this->model->insertarIdempotente([
                     'ClvCita' => $clvCita,
@@ -176,7 +234,8 @@ class CorreoCitaService
     {
         $resultado = [
             'paciente' => true,
-            'psicologo' => true
+            'psicologo' => true,
+            'responsable' => true
         ];
 
         if (!$this->persistenciaDisponible()) {
@@ -193,12 +252,16 @@ class CorreoCitaService
                 $resultado['paciente'] = false;
             }
 
+            if ($rol === 'RESPONSABLE' && !$ok) {
+                $resultado['responsable'] = false;
+            }
+
             if ($rol === 'PSICOLOGO' && !$ok) {
                 $resultado['psicologo'] = false;
             }
         }
 
-        if (!$resultado['paciente']) {
+        if (!$resultado['paciente'] || !$resultado['responsable']) {
             $resultado['mensajeCorreo'] =
                 'No fue posible enviar la confirmación por correo en este momento.';
         }
@@ -441,6 +504,11 @@ class CorreoCitaService
             return;
         }
 
+        if ($tipo === 'CONFIRMACION' && $rol === 'RESPONSABLE') {
+            $this->mailService->enviarConfirmacionCitaResponsable($contexto);
+            return;
+        }
+
         if ($tipo === 'CONFIRMACION' && $rol === 'PSICOLOGO') {
             $this->mailService->enviarConfirmacionCitaPsicologo($contexto);
             return;
@@ -448,6 +516,11 @@ class CorreoCitaService
 
         if ($tipo === 'RECORDATORIO_24H' && $rol === 'PACIENTE') {
             $this->mailService->enviarRecordatorioCitaPaciente($contexto);
+            return;
+        }
+
+        if ($tipo === 'RECORDATORIO_24H' && $rol === 'RESPONSABLE') {
+            $this->mailService->enviarRecordatorioCitaResponsable($contexto);
             return;
         }
 
@@ -487,6 +560,32 @@ class CorreoCitaService
      */
     public function obtenerContextoCita(string $clvCita): ?array
     {
+        $metaCita = $this->columnasCitaResponsableDisponibles();
+
+        $extraSelect = '';
+        $extraJoin = '';
+        if ($metaCita) {
+            $extraSelect = ",
+                    c.ClvUsuCreador,
+                    c.OrigenCita,
+                    c.IdRelacionResponsable,
+                    creadorUsu.CorreoUsu AS CorreoResponsable,
+                    creadorUsu.CorreoUsu AS CorreoCreador,
+                    CONCAT(
+                        TRIM(creadorPer.NombrePer), ' ',
+                        TRIM(creadorPer.ApPatPer), ' ',
+                        TRIM(COALESCE(creadorPer.ApMatPer, ''))
+                    ) AS NombreResponsable,
+                    TRIM(rel.Parentesco) AS Parentesco";
+            $extraJoin = "
+                LEFT JOIN usuario creadorUsu
+                    ON creadorUsu.ClvUsu = c.ClvUsuCreador
+                LEFT JOIN persona creadorPer
+                    ON creadorPer.ClvPer = creadorUsu.ClvPer
+                LEFT JOIN paciente_responsable rel
+                    ON rel.IdRelacion = c.IdRelacionResponsable";
+        }
+
         $sql = "SELECT
                     c.ClvCita,
                     c.FechaCita,
@@ -516,6 +615,7 @@ class CorreoCitaService
                     cons.NombreCons,
                     cons.TelefonoCons,
                     cons.CorreoElectronico AS CorreoConsultorio,
+                    cons.LogotipoCons,
                     cons.LimiteCancHoras,
                     d.PaisDir,
                     d.EstadoDir,
@@ -525,17 +625,21 @@ class CorreoCitaService
                     d.CodPostDir,
                     d.NumExtDir,
                     d.NumIntDir,
+                    d.LatitudDir,
+                    d.LongitudDir,
                     s.NombreServicio
+                    {$extraSelect}
                 FROM cita c
                 INNER JOIN paciente pac ON pac.ClvPac = c.ClvPac
-                INNER JOIN usuario pacUsu ON pacUsu.ClvUsu = pac.ClvUsu
-                INNER JOIN persona pacPer ON pacPer.ClvPer = pacUsu.ClvPer
+                INNER JOIN persona pacPer ON pacPer.ClvPer = pac.ClvPer
+                LEFT JOIN usuario pacUsu ON pacUsu.ClvUsu = pac.ClvUsu
                 INNER JOIN psicologo psi ON psi.ClvPsi = c.ClvPsi
                 INNER JOIN usuario psiUsu ON psiUsu.ClvUsu = psi.ClvUsu
                 INNER JOIN persona psiPer ON psiPer.ClvPer = psiUsu.ClvPer
                 INNER JOIN consultorio cons ON cons.ClvCons = c.ClvCons
                 LEFT JOIN direccion d ON d.ClvDir = cons.ClvDir
                 INNER JOIN servicios s ON s.ClvServ = c.ClvServ
+                {$extraJoin}
                 WHERE c.ClvCita = :clvCita
                 LIMIT 1";
 
@@ -547,6 +651,24 @@ class CorreoCitaService
             return null;
         }
 
+        $row['NombrePaciente'] = trim(preg_replace(
+            '/\s+/',
+            ' ',
+            (string) ($row['NombrePaciente'] ?? '')
+        ) ?? '');
+        $row['NombrePsicologo'] = trim(preg_replace(
+            '/\s+/',
+            ' ',
+            (string) ($row['NombrePsicologo'] ?? '')
+        ) ?? '');
+        if (isset($row['NombreResponsable'])) {
+            $row['NombreResponsable'] = trim(preg_replace(
+                '/\s+/',
+                ' ',
+                (string) $row['NombreResponsable']
+            ) ?? '');
+        }
+
         $row['UrlLogin'] = Helper::baseUrl('login');
         $row['UrlAgendaPsicologo'] = Helper::baseUrl('psicologo/agenda');
         $row['UrlMisCitas'] = Helper::baseUrl('paciente/mis-citas');
@@ -554,8 +676,205 @@ class CorreoCitaService
         $row['TextoCancelacion'] = Helper::textoPoliticaCancelacionPublica(
             (int) ($row['LimiteCancHoras'] ?? 0)
         );
+        $row['UrlLogoConsultorio'] = Helper::logotipoConsultorioUrl(
+            (string) ($row['LogotipoCons'] ?? ''),
+            false
+        );
+        $row['FechaCitaLarga'] = $this->formatearFechaLargaEs($row);
+        $row['HoraInicioFmt'] = substr((string) ($row['HraInicioCita'] ?? ''), 0, 5);
+        $row['HoraFinFmt'] = substr((string) ($row['HraFinCita'] ?? ''), 0, 5);
+        $row['UrlGoogleCalendar'] = $this->construirUrlGoogleCalendar($row);
+        $row['UrlComoLlegar'] = $this->construirUrlComoLlegar($row);
+        $row['EsReservaDependiente'] = strtoupper(
+            trim((string) ($row['OrigenCita'] ?? 'PACIENTE'))
+        ) === 'RESPONSABLE';
 
         return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $contexto
+     */
+    private function formatearFechaLargaEs(array $contexto): string
+    {
+        $fecha = trim((string) ($contexto['FechaCita'] ?? ''));
+        if ($fecha === '') {
+            return '';
+        }
+
+        $dt = DateTimeImmutable::createFromFormat(
+            'Y-m-d',
+            $fecha,
+            $this->zona()
+        );
+        if (!$dt) {
+            return $fecha;
+        }
+
+        $dias = [
+            1 => 'Lunes',
+            2 => 'Martes',
+            3 => 'Miércoles',
+            4 => 'Jueves',
+            5 => 'Viernes',
+            6 => 'Sábado',
+            7 => 'Domingo',
+        ];
+        $meses = [
+            1 => 'enero',
+            2 => 'febrero',
+            3 => 'marzo',
+            4 => 'abril',
+            5 => 'mayo',
+            6 => 'junio',
+            7 => 'julio',
+            8 => 'agosto',
+            9 => 'septiembre',
+            10 => 'octubre',
+            11 => 'noviembre',
+            12 => 'diciembre',
+        ];
+
+        $diaSemana = $dias[(int) $dt->format('N')] ?? '';
+        $dia = (int) $dt->format('j');
+        $mes = $meses[(int) $dt->format('n')] ?? '';
+        $anio = $dt->format('Y');
+
+        return "{$diaSemana}, {$dia} de {$mes} de {$anio}";
+    }
+
+    /**
+     * @param array<string, mixed> $contexto
+     */
+    private function construirUrlGoogleCalendar(array $contexto): string
+    {
+        $inicio = $this->fechaHoraInicio($contexto);
+        if ($inicio === null) {
+            return '';
+        }
+
+        $horaFin = trim((string) ($contexto['HraFinCita'] ?? ''));
+        if (preg_match('/^\d{2}:\d{2}$/', $horaFin)) {
+            $horaFin .= ':00';
+        }
+        $fin = null;
+        if ($horaFin !== '') {
+            $fin = DateTimeImmutable::createFromFormat(
+                'Y-m-d H:i:s',
+                trim((string) $contexto['FechaCita']) . ' ' . $horaFin,
+                $this->zona()
+            );
+        }
+        if (!$fin instanceof DateTimeImmutable) {
+            $mins = max(15, (int) ($contexto['DuracionAplicadaMin'] ?? 60));
+            $fin = $inicio->modify('+' . $mins . ' minutes');
+        }
+
+        $utc = new DateTimeZone('UTC');
+        $dates = $inicio->setTimezone($utc)->format('Ymd\THis\Z')
+            . '/'
+            . $fin->setTimezone($utc)->format('Ymd\THis\Z');
+
+        $titulo = 'Cita: '
+            . trim((string) ($contexto['NombreServicio'] ?? 'Sesión'))
+            . ' — '
+            . trim((string) ($contexto['NombrePsicologo'] ?? ''));
+
+        $detalles = 'Paciente: '
+            . trim((string) ($contexto['NombrePaciente'] ?? '')) . "\n"
+            . 'Especialista: '
+            . trim((string) ($contexto['NombrePsicologo'] ?? '')) . "\n"
+            . 'Consultorio: '
+            . trim((string) ($contexto['NombreCons'] ?? ''));
+
+        $params = [
+            'action' => 'TEMPLATE',
+            'text' => $titulo,
+            'dates' => $dates,
+            'details' => $detalles,
+            'location' => trim((string) ($contexto['DireccionCompleta'] ?? '')),
+        ];
+
+        return 'https://calendar.google.com/calendar/render?'
+            . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * @param array<string, mixed> $contexto
+     */
+    private function construirUrlComoLlegar(array $contexto): string
+    {
+        $lat = trim((string) ($contexto['LatitudDir'] ?? ''));
+        $lng = trim((string) ($contexto['LongitudDir'] ?? ''));
+
+        if (
+            $lat !== ''
+            && $lng !== ''
+            && is_numeric($lat)
+            && is_numeric($lng)
+        ) {
+            return 'https://www.google.com/maps/search/?api=1&query='
+                . rawurlencode($lat . ',' . $lng);
+        }
+
+        $dir = trim((string) ($contexto['DireccionCompleta'] ?? ''));
+        if ($dir === '') {
+            $dir = trim((string) ($contexto['NombreCons'] ?? ''));
+        }
+        if ($dir === '') {
+            return '';
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query='
+            . rawurlencode($dir);
+    }
+
+    private function columnasCitaResponsableDisponibles(): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $schema = (string) $this->db->query('SELECT DATABASE()')->fetchColumn();
+        if ($schema === '') {
+            $cache = false;
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = :schema
+               AND TABLE_NAME = 'cita'
+               AND COLUMN_NAME IN (
+                   'ClvUsuCreador', 'OrigenCita', 'IdRelacionResponsable'
+               )"
+        );
+        $stmt->execute(['schema' => $schema]);
+        $cache = (int) $stmt->fetchColumn() === 3;
+
+        return $cache;
+    }
+
+    private function rolResponsableSoportado(): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        try {
+            $stmt = $this->db->query(
+                "SHOW COLUMNS FROM correo_cita LIKE 'RolDestinatario'"
+            );
+            $col = $stmt->fetch(PDO::FETCH_ASSOC);
+            $type = (string) ($col['Type'] ?? '');
+            $cache = stripos($type, "RESPONSABLE") !== false;
+        } catch (Throwable $e) {
+            $cache = false;
+        }
+
+        return $cache;
     }
 
     /**

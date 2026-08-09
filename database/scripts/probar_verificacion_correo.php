@@ -117,6 +117,27 @@ foreach ($tablas as $t) {
 
 $pdoRoot->exec('SET FOREIGN_KEY_CHECKS=1');
 
+// Fase 4C: Paciente::crear requiere columna ClvPer (sin UNIQUE aquí para
+// tolerar inconsistencia histórica U009→2 pacientes en el seed copiado).
+$colClvPer = (int) $pdoRoot->query(
+    "SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA=" . $pdoRoot->quote($DB_COPY) . "
+       AND TABLE_NAME='paciente' AND COLUMN_NAME='ClvPer'"
+)->fetchColumn();
+if ($colClvPer < 1) {
+    $pdoRoot->exec(
+        "ALTER TABLE `paciente`
+         ADD COLUMN `ClvPer` VARCHAR(10) CHARACTER SET utf8mb4
+         COLLATE utf8mb4_unicode_ci NULL AFTER `ClvUsu`"
+    );
+    $pdoRoot->exec(
+        "UPDATE `paciente` p
+         INNER JOIN `usuario` u ON u.ClvUsu = p.ClvUsu
+         SET p.ClvPer = u.ClvPer
+         WHERE p.ClvPer IS NULL"
+    );
+}
+
 // Aplicar migración de verificación (solo en BD de prueba).
 $sqlMig = file_get_contents(
     APP_ROOT . '/database/migrations/20260808_verificacion_correo.sql'
@@ -227,6 +248,7 @@ $clvPac = ClaveService::generar('paciente', 'ClvPac', 'PAC');
 
 (new Paciente())->crear([
     'ClvPac' => $clvPac,
+    'ClvPer' => $clvPer,
     'ClvUsu' => $clvUsu,
     'ClvCons' => (string) $clvCons,
 ]);
@@ -418,6 +440,7 @@ $db->beginTransaction();
 ]);
 (new Paciente())->crear([
     'ClvPac' => $clvPac2,
+    'ClvPer' => $clvPer2,
     'ClvUsu' => $clvUsu2,
     'ClvCons' => (string) $clvCons,
 ]);

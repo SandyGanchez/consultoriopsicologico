@@ -823,3 +823,95 @@
         gap: 0.5rem 0.85rem;
     }
 }
+
+/* ¿Para quién es la cita? */
+.appointment-for-whom {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(207, 214, 196, 0.85);
+}
+
+.appointment-for-whom__title {
+    color: #657166;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.appointment-for-whom__intro {
+    color: #657166;
+    opacity: 0.85;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.appointment-for-whom__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.appointment-for-whom__option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    border: 1px solid #CFD6C4;
+    background: #F7F9F8;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.appointment-for-whom__option:has(input:checked) {
+    background: #DAEBE3;
+    border-color: #99CDD8;
+}
+
+.appointment-for-whom__option input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+.appointment-for-whom__option-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.appointment-for-whom__option-body strong {
+    color: #465149;
+    font-size: 0.98rem;
+}
+
+.appointment-for-whom__option-body small {
+    color: #657166;
+    opacity: 0.9;
+}
+
+.appointment-for-whom__option-body a {
+    color: #4a7c89;
+    text-decoration: underline;
+}
+
+.appointment-for-whom__nuevo {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px dashed #99CDD8;
+    background: #fff;
+}
+
+.appointment-for-whom__nuevo-note {
+    color: #657166;
+    font-size: 0.9rem;
+    margin-bottom: 0.85rem;
+}
+
+@media (max-width: 767px) {
+    .appointment-for-whom__option {
+        padding: 0.75rem 0.85rem;
+    }
+}

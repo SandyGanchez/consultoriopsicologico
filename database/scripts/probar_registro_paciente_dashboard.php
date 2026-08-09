@@ -80,6 +80,7 @@ $clvPac = ClaveService::generar('paciente', 'ClvPac', 'PAC');
 
 (new Paciente())->crear([
     'ClvPac' => $clvPac,
+    'ClvPer' => $clvPer,
     'ClvUsu' => $clvUsu,
     'ClvCons' => $clvCons,
 ]);

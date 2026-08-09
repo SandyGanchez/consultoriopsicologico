@@ -693,11 +693,18 @@ class ActivacionCuentaService
                 $privacidad = new PrivacidadService();
                 $fechaNacimiento = (string) ($activacion['FechaNacimiento'] ?? '');
 
+                $pacInv = $this->pacienteModel->obtenerPorUsuario($clvUsu);
                 $consentimiento = $privacidad->registrarConsentimiento(
                     $clvUsu,
                     'ACTIVACION',
                     $consentimientoPost,
-                    $fechaNacimiento
+                    $fechaNacimiento,
+                    [
+                        'ClvPacSujeto' => is_array($pacInv)
+                            ? (string) ($pacInv['ClvPac'] ?? '')
+                            : null,
+                        'IdRelacionResponsable' => null,
+                    ]
                 );
 
                 if (empty($consentimiento['ok'])) {
@@ -1122,6 +1129,7 @@ class ActivacionCuentaService
 
         $this->pacienteModel->crear([
             'ClvPac' => $clvPac,
+            'ClvPer' => $clvPer,
             'ClvUsu' => $clvUsu,
             'ClvCons' => $clvCons
         ]);
@@ -1726,8 +1734,8 @@ class ActivacionCuentaService
                 INNER JOIN servicios s ON s.ClvServ = c.ClvServ
                 INNER JOIN consultorio co ON co.ClvCons = c.ClvCons
                 INNER JOIN paciente pac ON pac.ClvPac = c.ClvPac
-                INNER JOIN usuario u ON u.ClvUsu = pac.ClvUsu
-                INNER JOIN persona perp ON perp.ClvPer = u.ClvPer
+                INNER JOIN persona perp ON perp.ClvPer = pac.ClvPer
+                LEFT JOIN usuario u ON u.ClvUsu = pac.ClvUsu
                 INNER JOIN psicologo psi ON psi.ClvPsi = c.ClvPsi
                 INNER JOIN usuario upsi ON upsi.ClvUsu = psi.ClvUsu
                 INNER JOIN persona perpsi ON perpsi.ClvPer = upsi.ClvPer

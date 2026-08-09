@@ -546,11 +546,19 @@ class PrivacidadService
     /**
      * @return array{ok: bool, creado?: bool, mensaje?: string, id?: int}
      */
+    /**
+     * @param array{
+     *   ClvPacSujeto?: string|null,
+     *   IdRelacionResponsable?: int|null
+     * } $contextoSujeto
+     * @return array{ok: bool, creado?: bool, mensaje?: string, id?: int}
+     */
     public function registrarConsentimiento(
         string $clvUsu,
         string $medio,
         array $post,
-        ?string $fechaNacimiento = null
+        ?string $fechaNacimiento = null,
+        array $contextoSujeto = []
     ): array {
         $medio = strtoupper(trim($medio));
 
@@ -582,6 +590,60 @@ class PrivacidadService
             return $edad;
         }
 
+        return $this->persistirAceptacion(
+            $clvUsu,
+            $medio,
+            $contextoSujeto
+        );
+    }
+
+    /**
+     * Consentimiento otorgado por un responsable autenticado (adulto)
+     * respecto de los datos de un paciente dependiente (puede ser menor).
+     *
+     * @return array{ok: bool, creado?: bool, mensaje?: string, id?: int}
+     */
+    public function registrarConsentimientoDependiente(
+        string $clvUsuResponsable,
+        string $clvPacSujeto,
+        int $idRelacionResponsable,
+        array $post
+    ): array {
+        $validacion = $this->validarCheckboxesConsentimiento($post);
+
+        if (!$validacion['ok']) {
+            return $validacion;
+        }
+
+        if (trim($clvPacSujeto) === '' || $idRelacionResponsable <= 0) {
+            return [
+                'ok' => false,
+                'mensaje' => 'Falta el paciente sujeto o la relación de responsabilidad.'
+            ];
+        }
+
+        return $this->persistirAceptacion(
+            $clvUsuResponsable,
+            'PANEL',
+            [
+                'ClvPacSujeto' => $clvPacSujeto,
+                'IdRelacionResponsable' => $idRelacionResponsable,
+            ]
+        );
+    }
+
+    /**
+     * @param array{
+     *   ClvPacSujeto?: string|null,
+     *   IdRelacionResponsable?: int|null
+     * } $contextoSujeto
+     * @return array{ok: bool, creado?: bool, mensaje?: string, id?: int}
+     */
+    private function persistirAceptacion(
+        string $clvUsu,
+        string $medio,
+        array $contextoSujeto = []
+    ): array {
         if (!$this->persistenciaDisponible()) {
             return [
                 'ok' => false,
@@ -598,13 +660,14 @@ class PrivacidadService
             ];
         }
 
-        // Solo IdAvisoPrivacidad; versión/hash se leen en el modelo desde la tabla.
         return $this->consentimientoModel->registrarAceptacion([
             'ClvUsu' => $clvUsu,
             'IdAvisoPrivacidad' => (int) $aviso['IdAvisoPrivacidad'],
             'AvisoLeido' => 1,
             'ConsentimientoDatosSensibles' => 1,
-            'MedioAceptacion' => $medio
+            'MedioAceptacion' => $medio,
+            'ClvPacSujeto' => $contextoSujeto['ClvPacSujeto'] ?? null,
+            'IdRelacionResponsable' => $contextoSujeto['IdRelacionResponsable'] ?? null,
         ]);
     }
 

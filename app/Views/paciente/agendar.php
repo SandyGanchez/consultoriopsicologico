@@ -684,6 +684,181 @@ unset(
 
                 </div>
 
+                <?php
+                    $dependientesAgendar = is_array($dependientesAgendar ?? null)
+                        ? $dependientesAgendar
+                        : [];
+                    $limitesEdad = is_array($limitesEdad ?? null)
+                        ? $limitesEdad
+                        : ['min' => '1900-01-01', 'max' => date('Y-m-d')];
+                    $nombrePropio = trim((string) ($nombrePropio ?? 'Yo'));
+                    $clvPacPropio = htmlspecialchars(
+                        (string) (($paciente['ClvPac'] ?? '')),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    );
+                ?>
+
+                <section
+                    class="appointment-for-whom"
+                    id="appointmentForWhom"
+                    aria-labelledby="forWhomTitle"
+                >
+                    <h2 class="appointment-for-whom__title" id="forWhomTitle">
+                        ¿Para quién es la cita?
+                    </h2>
+                    <p class="appointment-for-whom__intro">
+                        Elige si la sesión es para ti o para una persona a tu cargo.
+                        La confirmación llegará a tu correo.
+                    </p>
+
+                    <div class="appointment-for-whom__options" role="radiogroup" aria-label="Destinatario de la cita">
+                        <label class="appointment-for-whom__option">
+                            <input
+                                type="radio"
+                                name="destino_cita"
+                                value="yo"
+                                checked
+                                data-for-whom="yo"
+                            >
+                            <span class="appointment-for-whom__option-body">
+                                <strong>
+                                    <?= htmlspecialchars($nombrePropio, ENT_QUOTES, 'UTF-8'); ?>
+                                    (Yo)
+                                </strong>
+                                <small>
+                                    <a href="<?= Helper::baseUrl('paciente/perfil'); ?>">
+                                        Editar perfil
+                                    </a>
+                                </small>
+                            </span>
+                        </label>
+
+                        <?php foreach ($dependientesAgendar as $dep): ?>
+                            <?php
+                                $clvDep = (string) ($dep['ClvPac'] ?? '');
+                                $nomDep = trim((string) ($dep['NombreCompleto'] ?? ''));
+                                $parentesco = trim((string) ($dep['Parentesco'] ?? ''));
+                            ?>
+                            <label class="appointment-for-whom__option">
+                                <input
+                                    type="radio"
+                                    name="destino_cita"
+                                    value="dependiente"
+                                    data-for-whom="dependiente"
+                                    data-clv-pac="<?= htmlspecialchars($clvDep, ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                <span class="appointment-for-whom__option-body">
+                                    <strong>
+                                        <?= htmlspecialchars($nomDep, ENT_QUOTES, 'UTF-8'); ?>
+                                    </strong>
+                                    <?php if ($parentesco !== ''): ?>
+                                        <small>
+                                            <?= htmlspecialchars($parentesco, ENT_QUOTES, 'UTF-8'); ?>
+                                        </small>
+                                    <?php endif; ?>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+
+                        <label class="appointment-for-whom__option">
+                            <input
+                                type="radio"
+                                name="destino_cita"
+                                value="nuevo"
+                                data-for-whom="nuevo"
+                            >
+                            <span class="appointment-for-whom__option-body">
+                                <strong>Para otra persona</strong>
+                                <small>Registrar y agendar en este paso</small>
+                            </span>
+                        </label>
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="clv_pac_destino"
+                        id="clvPacDestino"
+                        value="<?= $clvPacPropio; ?>"
+                    >
+
+                    <div
+                        class="appointment-for-whom__nuevo d-none"
+                        id="formNuevoDependiente"
+                        hidden
+                    >
+                        <p class="appointment-for-whom__nuevo-note">
+                            El paciente se guardará para futuros agendamientos en tu cuenta.
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_nombre">Nombre</label>
+                                <input type="text" class="form-control" name="dep_nombre" id="dep_nombre" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_apPat">Apellido paterno</label>
+                                <input type="text" class="form-control" name="dep_apPat" id="dep_apPat" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_apMat">Apellido materno</label>
+                                <input type="text" class="form-control" name="dep_apMat" id="dep_apMat" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_fechaNacimiento">Fecha de nacimiento</label>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    name="dep_fechaNacimiento"
+                                    id="dep_fechaNacimiento"
+                                    min="<?= htmlspecialchars((string) ($limitesEdad['min'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                    max="<?= htmlspecialchars((string) ($limitesEdad['max'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_genero">Género</label>
+                                <select class="form-select" name="dep_genero" id="dep_genero">
+                                    <option value="">Selecciona</option>
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Femenino">Femenino</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small" for="dep_parentesco">Parentesco</label>
+                                <input type="text" class="form-control" name="dep_parentesco" id="dep_parentesco" placeholder="Ej. Hijo/a" autocomplete="off">
+                            </div>
+                            <div class="col-12" id="depTutorWrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="dep_EsTutorLegal" value="1" id="dep_EsTutorLegal">
+                                    <label class="form-check-label small" for="dep_EsTutorLegal">
+                                        Declaro ser tutor legal (obligatorio si es menor de 18).
+                                        Declaración del usuario; el sistema no verifica la tutela.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="dep_aviso_leido" value="1" id="dep_aviso_leido">
+                                    <label class="form-check-label small" for="dep_aviso_leido">
+                                        He leído el Aviso de Privacidad aplicable a los datos de esta persona
+                                        <?php if (!empty($versionAviso)): ?>
+                                            (versión <?= htmlspecialchars((string) $versionAviso, ENT_QUOTES, 'UTF-8'); ?>)
+                                        <?php endif; ?>.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="dep_consentimiento_sensibles" value="1" id="dep_consentimiento_sensibles">
+                                    <label class="form-check-label small" for="dep_consentimiento_sensibles">
+                                        Consiento el tratamiento de datos personales (incluidos sensibles) de esta persona.
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
 
 
                 <div class="appointment-actions d-lg-none">

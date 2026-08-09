@@ -124,7 +124,24 @@ class ConsentimientoDatosPersonales
             $version = (string) $aviso['VersionAviso'];
             $hash = strtolower((string) $aviso['HashContenidoAviso']);
 
-            $existente = $this->obtenerVigenteBloqueado($clvUsu, $idAviso);
+            $clvPacSujeto = trim((string) ($datos['ClvPacSujeto'] ?? ''));
+            $idRelacion = $datos['IdRelacionResponsable'] ?? null;
+            $idRelacion = $idRelacion === null || $idRelacion === ''
+                ? null
+                : (int) $idRelacion;
+
+            $tieneSujeto = $this->columnaExiste('ClvPacSujeto');
+            $sujetoScope = $tieneSujeto && $clvPacSujeto !== ''
+                ? $clvPacSujeto
+                : null;
+
+            // Un VIGENTE por (usuario, aviso, sujeto). El responsable puede
+            // tener el propio + uno por cada dependiente sin colisionar.
+            $existente = $this->obtenerVigenteBloqueado(
+                $clvUsu,
+                $idAviso,
+                $sujetoScope
+            );
 
             if ($existente !== null) {
                 if ($propia) {
@@ -138,48 +155,97 @@ class ConsentimientoDatosPersonales
                 ];
             }
 
-            $this->marcarOtrasVigentesComoSupersedidas($clvUsu);
+            $this->marcarOtrasVigentesComoSupersedidas($clvUsu, $sujetoScope);
 
-            $sql = "
-                INSERT INTO consentimiento_datos_personales (
-                    ClvUsu,
-                    IdAvisoPrivacidad,
-                    VersionAviso,
-                    HashContenidoAviso,
-                    AvisoLeido,
-                    ConsentimientoDatosSensibles,
-                    FechaAceptacion,
-                    MedioAceptacion,
-                    EstadoConsentimiento,
-                    FechaRevocacion,
-                    FechaCambioEstado
-                ) VALUES (
-                    :clvUsu,
-                    :idAviso,
-                    :version,
-                    :hash,
-                    :aviso,
-                    :sensibles,
-                    NOW(),
-                    :medio,
-                    'VIGENTE',
-                    NULL,
-                    NULL
-                )
-            ";
+            if ($tieneSujeto) {
+                $sql = "
+                    INSERT INTO consentimiento_datos_personales (
+                        ClvUsu,
+                        ClvPacSujeto,
+                        IdRelacionResponsable,
+                        IdAvisoPrivacidad,
+                        VersionAviso,
+                        HashContenidoAviso,
+                        AvisoLeido,
+                        ConsentimientoDatosSensibles,
+                        FechaAceptacion,
+                        MedioAceptacion,
+                        EstadoConsentimiento,
+                        FechaRevocacion,
+                        FechaCambioEstado
+                    ) VALUES (
+                        :clvUsu,
+                        :clvPacSujeto,
+                        :idRelacion,
+                        :idAviso,
+                        :version,
+                        :hash,
+                        :aviso,
+                        :sensibles,
+                        NOW(),
+                        :medio,
+                        'VIGENTE',
+                        NULL,
+                        NULL
+                    )
+                ";
 
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                'clvUsu' => $clvUsu,
-                'idAviso' => $idAviso,
-                'version' => $version,
-                'hash' => $hash,
-                'aviso' => !empty($datos['AvisoLeido']) ? 1 : 0,
-                'sensibles' => !empty($datos['ConsentimientoDatosSensibles'])
-                    ? 1
-                    : 0,
-                'medio' => $medio
-            ]);
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([
+                    'clvUsu' => $clvUsu,
+                    'clvPacSujeto' => $clvPacSujeto !== '' ? $clvPacSujeto : null,
+                    'idRelacion' => $idRelacion,
+                    'idAviso' => $idAviso,
+                    'version' => $version,
+                    'hash' => $hash,
+                    'aviso' => !empty($datos['AvisoLeido']) ? 1 : 0,
+                    'sensibles' => !empty($datos['ConsentimientoDatosSensibles'])
+                        ? 1
+                        : 0,
+                    'medio' => $medio
+                ]);
+            } else {
+                $sql = "
+                    INSERT INTO consentimiento_datos_personales (
+                        ClvUsu,
+                        IdAvisoPrivacidad,
+                        VersionAviso,
+                        HashContenidoAviso,
+                        AvisoLeido,
+                        ConsentimientoDatosSensibles,
+                        FechaAceptacion,
+                        MedioAceptacion,
+                        EstadoConsentimiento,
+                        FechaRevocacion,
+                        FechaCambioEstado
+                    ) VALUES (
+                        :clvUsu,
+                        :idAviso,
+                        :version,
+                        :hash,
+                        :aviso,
+                        :sensibles,
+                        NOW(),
+                        :medio,
+                        'VIGENTE',
+                        NULL,
+                        NULL
+                    )
+                ";
+
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([
+                    'clvUsu' => $clvUsu,
+                    'idAviso' => $idAviso,
+                    'version' => $version,
+                    'hash' => $hash,
+                    'aviso' => !empty($datos['AvisoLeido']) ? 1 : 0,
+                    'sensibles' => !empty($datos['ConsentimientoDatosSensibles'])
+                        ? 1
+                        : 0,
+                    'medio' => $medio
+                ]);
+            }
 
             $id = (int) $this->db->lastInsertId();
 
@@ -282,7 +348,8 @@ class ConsentimientoDatosPersonales
 
     private function obtenerVigenteBloqueado(
         string $clvUsu,
-        int $idAviso
+        int $idAviso,
+        ?string $clvPacSujeto = null
     ): ?array {
         $sql = "
             SELECT *
@@ -290,24 +357,39 @@ class ConsentimientoDatosPersonales
             WHERE ClvUsu = :clvUsu
               AND IdAvisoPrivacidad = :idAviso
               AND EstadoConsentimiento = 'VIGENTE'
+        ";
+        $params = [
+            'clvUsu' => trim($clvUsu),
+            'idAviso' => $idAviso,
+        ];
+
+        if (
+            $clvPacSujeto !== null
+            && $clvPacSujeto !== ''
+            && $this->columnaExiste('ClvPacSujeto')
+        ) {
+            $sql .= ' AND ClvPacSujeto = :sujeto';
+            $params['sujeto'] = $clvPacSujeto;
+        }
+
+        $sql .= '
             ORDER BY FechaAceptacion DESC, IdConsentimiento DESC
             LIMIT 1
             FOR UPDATE
-        ";
+        ';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            'clvUsu' => trim($clvUsu),
-            'idAviso' => $idAviso
-        ]);
+        $stmt->execute($params);
 
         $fila = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $fila ?: null;
     }
 
-    private function marcarOtrasVigentesComoSupersedidas(string $clvUsu): void
-    {
+    private function marcarOtrasVigentesComoSupersedidas(
+        string $clvUsu,
+        ?string $clvPacSujeto = null
+    ): void {
         $sql = "
             UPDATE consentimiento_datos_personales
             SET EstadoConsentimiento = 'SUPERSEDIDO',
@@ -316,8 +398,41 @@ class ConsentimientoDatosPersonales
             WHERE ClvUsu = :clvUsu
               AND EstadoConsentimiento = 'VIGENTE'
         ";
+        $params = ['clvUsu' => trim($clvUsu)];
+
+        if (
+            $clvPacSujeto !== null
+            && $clvPacSujeto !== ''
+            && $this->columnaExiste('ClvPacSujeto')
+        ) {
+            // No invalidar el consentimiento propio del responsable
+            // al registrar el de un dependiente.
+            $sql .= ' AND ClvPacSujeto = :sujeto';
+            $params['sujeto'] = $clvPacSujeto;
+        }
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['clvUsu' => trim($clvUsu)]);
+        $stmt->execute($params);
+    }
+
+    private function columnaExiste(string $columna): bool
+    {
+        static $cache = [];
+
+        if (array_key_exists($columna, $cache)) {
+            return $cache[$columna];
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = \'consentimiento_datos_personales\'
+               AND COLUMN_NAME = :c'
+        );
+        $stmt->execute(['c' => $columna]);
+        $cache[$columna] = (int) $stmt->fetchColumn() > 0;
+
+        return $cache[$columna];
     }
 }

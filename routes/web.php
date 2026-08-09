@@ -339,6 +339,10 @@ return [
     PacienteController::class,
     'detalleCita'
 ],
+'/paciente/cita-ics' => [
+    PacienteController::class,
+    'descargarIcsCita'
+],
 
 '/paciente/perfil' => [
     PacienteController::class,
@@ -362,6 +366,11 @@ return [
         '/paciente/configuracion' => [
             PacienteController::class,
             'configuracion'
+        ],
+
+        '/paciente/dependientes' => [
+            PacienteController::class,
+            'dependientes'
         ],
 
         '/paciente/notificaciones' => [
@@ -703,6 +712,21 @@ return [
 '/paciente/configuracion/cancelar-cambio-correo' => [
     PacienteController::class,
     'cancelarCambioCorreo'
+],
+
+'/paciente/dependientes/crear' => [
+    PacienteController::class,
+    'crearDependiente'
+],
+
+'/paciente/dependientes/editar' => [
+    PacienteController::class,
+    'editarDependiente'
+],
+
+'/paciente/dependientes/cambiar-estado' => [
+    PacienteController::class,
+    'cambiarEstadoDependiente'
 ],
 
 /* Legacy POST multiconsultorio: ignoran {id} y redirigen sin operar. */

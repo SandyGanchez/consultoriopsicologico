@@ -212,13 +212,25 @@ class Cita extends Model
      * @return list<array<string, mixed>>
      */
     public function obtenerMisCitas(
-        string $clvPac
+        string $clvPac,
+        ?string $clvUsu = null
     ): array {
         $clvPac = trim($clvPac);
+        $clvUsu = trim((string) $clvUsu);
 
         if ($clvPac === '') {
             return [];
         }
+
+        $meta = $this->columnasResponsableDisponibles() && $clvUsu !== '';
+        $nombrePacienteSql = "
+                    TRIM(CONCAT(
+                        COALESCE(pacPer.NombrePer, ''),
+                        ' ',
+                        COALESCE(pacPer.ApPatPer, ''),
+                        ' ',
+                        COALESCE(pacPer.ApMatPer, '')
+                    )) AS NombrePacienteAtendido";
 
         $sql = "SELECT
                     c.ClvCita,
@@ -228,6 +240,7 @@ class Cita extends Model
                     c.DuracionAplicadaMin,
                     c.EstadoCita,
                     c.ClvCons,
+                    c.ClvPac,
                     co.LimiteCancHoras,
                     co.NombreCons,
                     TRIM(CONCAT(
@@ -238,7 +251,8 @@ class Cita extends Model
                         COALESCE(per.ApMatPer, '')
                     )) AS NombrePsicologo,
                     s.NombreServicio,
-                    c.CostoAplicado
+                    c.CostoAplicado,
+                    {$nombrePacienteSql}
                 FROM cita c
                 INNER JOIN psicologo p
                     ON c.ClvPsi = p.ClvPsi
@@ -250,7 +264,20 @@ class Cita extends Model
                     ON c.ClvServ = s.ClvServ
                 INNER JOIN consultorio co
                     ON co.ClvCons = c.ClvCons
-                WHERE c.ClvPac = :clvPac
+                INNER JOIN paciente pac
+                    ON pac.ClvPac = c.ClvPac
+                INNER JOIN persona pacPer
+                    ON pacPer.ClvPer = pac.ClvPer
+                WHERE (
+                      c.ClvPac = :clvPac
+                      " . ($meta ? "OR c.ClvUsuCreador = :usu
+                      OR EXISTS (
+                          SELECT 1 FROM paciente_responsable r
+                          WHERE r.ClvPac = c.ClvPac
+                            AND r.ClvUsuResponsable = :usu2
+                            AND r.EstadoRelacion = 'ACTIVA'
+                      )" : '') . "
+                  )
                   AND (
                       c.EstadoCita = 'PROGRAMADA'
                       OR c.FechaCita >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
@@ -260,9 +287,12 @@ class Cita extends Model
                     c.HraInicioCita DESC";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            'clvPac' => $clvPac
-        ]);
+        $params = ['clvPac' => $clvPac];
+        if ($meta) {
+            $params['usu'] = $clvUsu;
+            $params['usu2'] = $clvUsu;
+        }
+        $stmt->execute($params);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -745,6 +775,91 @@ class Cita extends Model
 
     public function crearCita(array $datos): void
     {
+        $conMeta = $this->columnasResponsableDisponibles();
+        $origen = strtoupper(trim((string) ($datos['OrigenCita'] ?? 'PACIENTE')));
+        $clvUsuCreador = trim((string) ($datos['ClvUsuCreador'] ?? ''));
+        $idRelacion = $datos['IdRelacionResponsable'] ?? null;
+
+        if (
+            !$conMeta
+            && in_array($origen, ['RESPONSABLE', 'PSICOLOGO', 'CONSULTORIO'], true)
+        ) {
+            throw new RuntimeException(
+                'Para agendar a un dependiente debes aplicar primero la migración '
+                . '20260809_cita_responsable (revisión pendiente en BD real).'
+            );
+        }
+
+        if ($conMeta) {
+            if ($clvUsuCreador === '') {
+                throw new RuntimeException(
+                    'No se pudo registrar el usuario que reservó la cita.'
+                );
+            }
+
+            if (!in_array(
+                $origen,
+                ['PACIENTE', 'RESPONSABLE', 'PSICOLOGO', 'CONSULTORIO'],
+                true
+            )) {
+                throw new RuntimeException('Origen de cita no válido.');
+            }
+
+            $sql = "INSERT INTO cita (
+                        ClvCita,
+                        FechaCita,
+                        HraInicioCita,
+                        HraFinCita,
+                        DuracionAplicadaMin,
+                        CostoAplicado,
+                        EstadoCita,
+                        ClvPac,
+                        ClvPsi,
+                        ClvCons,
+                        ClvServ,
+                        ClvUsuCreador,
+                        OrigenCita,
+                        IdRelacionResponsable
+                    ) VALUES (
+                        :clvCita,
+                        :fecha,
+                        :inicio,
+                        :fin,
+                        :duracion,
+                        :costo,
+                        'PROGRAMADA',
+                        :paciente,
+                        :psicologo,
+                        :consultorio,
+                        :servicio,
+                        :creador,
+                        :origen,
+                        :idRelacion
+                    )";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue('clvCita', $datos['ClvCita']);
+            $stmt->bindValue('fecha', $datos['FechaCita']);
+            $stmt->bindValue('inicio', $datos['HraInicioCita']);
+            $stmt->bindValue('fin', $datos['HraFinCita']);
+            $stmt->bindValue('duracion', $datos['DuracionAplicadaMin']);
+            $stmt->bindValue('costo', $datos['CostoAplicado']);
+            $stmt->bindValue('paciente', $datos['ClvPac']);
+            $stmt->bindValue('psicologo', $datos['ClvPsi']);
+            $stmt->bindValue('consultorio', $datos['ClvCons']);
+            $stmt->bindValue('servicio', $datos['ClvServ']);
+            $stmt->bindValue('creador', $clvUsuCreador);
+            $stmt->bindValue('origen', $origen);
+            if ($idRelacion === null || $idRelacion === '' || (int) $idRelacion <= 0) {
+                $stmt->bindValue('idRelacion', null, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindValue('idRelacion', (int) $idRelacion, PDO::PARAM_INT);
+            }
+            $stmt->execute();
+
+            return;
+        }
+
         $sql = "INSERT INTO cita (
                     ClvCita,
                     FechaCita,
@@ -785,6 +900,109 @@ class Cita extends Model
             'consultorio' => $datos['ClvCons'],
             'servicio' => $datos['ClvServ']
         ]);
+    }
+
+    /**
+     * true si existen ClvUsuCreador, OrigenCita e IdRelacionResponsable.
+     */
+    public function columnasResponsableDisponibles(): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $schema = (string) $this->db->query('SELECT DATABASE()')->fetchColumn();
+        if ($schema === '') {
+            $cache = false;
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = :schema
+               AND TABLE_NAME = 'cita'
+               AND COLUMN_NAME IN (
+                   'ClvUsuCreador', 'OrigenCita', 'IdRelacionResponsable'
+               )"
+        );
+        $stmt->execute(['schema' => $schema]);
+        $cache = (int) $stmt->fetchColumn() === 3;
+
+        return $cache;
+    }
+
+    /**
+     * Acceso a detalle: paciente propio, creador o responsable activo.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function obtenerDetalleParaCuentaPaciente(
+        string $clvCita,
+        string $clvPacPropio,
+        string $clvUsu
+    ): ?array {
+        $clvCita = trim($clvCita);
+        $clvPacPropio = trim($clvPacPropio);
+        $clvUsu = trim($clvUsu);
+
+        if ($clvCita === '' || $clvUsu === '') {
+            return null;
+        }
+
+        $meta = $this->columnasResponsableDisponibles();
+
+        $sql = "SELECT
+                    c.*,
+                    s.NombreServicio,
+                    s.CostoServicio,
+                    s.DuracionMinutos,
+                    con.NombreCons,
+                    con.LimiteCancHoras,
+                    CONCAT(
+                        per.NombrePer,
+                        ' ',
+                        per.ApPatPer,
+                        ' ',
+                        per.ApMatPer
+                    ) AS NombrePsicologo
+                FROM cita c
+                INNER JOIN psicologo p
+                    ON c.ClvPsi = p.ClvPsi
+                INNER JOIN usuario u
+                    ON p.ClvUsu = u.ClvUsu
+                INNER JOIN persona per
+                    ON u.ClvPer = per.ClvPer
+                INNER JOIN servicios s
+                    ON c.ClvServ = s.ClvServ
+                INNER JOIN consultorio con
+                    ON c.ClvCons = con.ClvCons
+                WHERE c.ClvCita = :cita
+                  AND (
+                      c.ClvPac = :paciente
+                      " . ($meta ? "OR c.ClvUsuCreador = :usu
+                      OR EXISTS (
+                          SELECT 1 FROM paciente_responsable r
+                          WHERE r.ClvPac = c.ClvPac
+                            AND r.ClvUsuResponsable = :usu2
+                            AND r.EstadoRelacion = 'ACTIVA'
+                      )" : '') . "
+                  )
+                LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $params = [
+            'cita' => $clvCita,
+            'paciente' => $clvPacPropio,
+        ];
+        if ($meta) {
+            $params['usu'] = $clvUsu;
+            $params['usu2'] = $clvUsu;
+        }
+        $stmt->execute($params);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $resultado ?: null;
     }
 
     private function normalizarHoraCita(string $hora): string
@@ -1576,11 +1794,11 @@ public function obtenerDetallePaciente(
                 INNER JOIN paciente pac
                     ON c.ClvPac = pac.ClvPac
 
-                INNER JOIN usuario usuPac
-                    ON pac.ClvUsu = usuPac.ClvUsu
-
                 INNER JOIN persona perPac
-                    ON usuPac.ClvPer = perPac.ClvPer
+                    ON perPac.ClvPer = pac.ClvPer
+
+                LEFT JOIN usuario usuPac
+                    ON usuPac.ClvUsu = pac.ClvUsu
 
                 INNER JOIN servicios s
                     ON c.ClvServ = s.ClvServ
@@ -1658,11 +1876,11 @@ public function obtenerDetallePaciente(
                 INNER JOIN paciente pac
                     ON c.ClvPac = pac.ClvPac
 
-                INNER JOIN usuario usuPac
-                    ON pac.ClvUsu = usuPac.ClvUsu
-
                 INNER JOIN persona perPac
-                    ON usuPac.ClvPer = perPac.ClvPer
+                    ON perPac.ClvPer = pac.ClvPer
+
+                LEFT JOIN usuario usuPac
+                    ON usuPac.ClvUsu = pac.ClvUsu
 
                 INNER JOIN psicologo psi
                     ON c.ClvPsi = psi.ClvPsi
@@ -1960,11 +2178,11 @@ public function obtenerDetallePaciente(
                 INNER JOIN paciente pac
                     ON c.ClvPac = pac.ClvPac
 
-                INNER JOIN usuario usuPac
-                    ON pac.ClvUsu = usuPac.ClvUsu
-
                 INNER JOIN persona perPac
-                    ON usuPac.ClvPer = perPac.ClvPer
+                    ON perPac.ClvPer = pac.ClvPer
+
+                LEFT JOIN usuario usuPac
+                    ON usuPac.ClvUsu = pac.ClvUsu
 
                 INNER JOIN servicios s
                     ON c.ClvServ = s.ClvServ

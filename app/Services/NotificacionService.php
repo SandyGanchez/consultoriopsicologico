@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Config\Database;
+use App\Models\Cita;
 use App\Models\Notificacion;
 use InvalidArgumentException;
 use PDO;
@@ -877,10 +878,8 @@ class NotificacionService
             FROM cita c
             INNER JOIN paciente pac
                 ON pac.ClvPac = c.ClvPac
-            INNER JOIN usuario usuPac
-                ON usuPac.ClvUsu = pac.ClvUsu
             INNER JOIN persona perPac
-                ON perPac.ClvPer = usuPac.ClvPer
+                ON perPac.ClvPer = pac.ClvPer
             INNER JOIN psicologo psi
                 ON psi.ClvPsi = c.ClvPsi
             LEFT JOIN servicios s
@@ -944,6 +943,9 @@ class NotificacionService
                 c.FechaCita,
                 c.HraInicioCita,
                 pac.ClvUsu AS ClvUsuPaciente,
+                " . ((new Cita())->columnasResponsableDisponibles()
+                    ? 'c.ClvUsuCreador,'
+                    : 'NULL AS ClvUsuCreador,') . "
                 COALESCE(s.NombreServicio, 'servicio') AS NombreServicio,
                 TRIM(CONCAT(
                     COALESCE(perPsi.NombrePer, ''),
@@ -974,6 +976,9 @@ class NotificacionService
         }
 
         $destinatario = trim((string) ($fila['ClvUsuPaciente'] ?? ''));
+        if ($destinatario === '') {
+            $destinatario = trim((string) ($fila['ClvUsuCreador'] ?? ''));
+        }
 
         if ($destinatario === '') {
             return null;

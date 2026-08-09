@@ -9,38 +9,41 @@ class Paciente extends Model
 {
     public function crear(array $datos): void
     {
+        $clvPer = trim((string) ($datos['ClvPer'] ?? ''));
+        if ($clvPer === '') {
+            throw new \InvalidArgumentException(
+                'Paciente::crear requiere ClvPer explícito.'
+            );
+        }
+
+        $clvUsu = array_key_exists('ClvUsu', $datos)
+            ? $datos['ClvUsu']
+            : null;
+        if ($clvUsu !== null) {
+            $clvUsu = trim((string) $clvUsu);
+            if ($clvUsu === '') {
+                $clvUsu = null;
+            }
+        }
+
         $stmt = $this->db->prepare(
-
-            "INSERT INTO paciente
-
-            (
-
+            "INSERT INTO paciente (
                 ClvPac,
                 FotoPerfilPac,
                 EstadoActivoPac,
                 ClvUsu,
+                ClvPer,
                 ClvCons
-
-            )
-
-            VALUES
-
-            (?,?,?,?,?)"
-
+            ) VALUES (?,?,?,?,?,?)"
         );
 
         $stmt->execute([
-
             $datos['ClvPac'],
-
             'perfil-default.png',
-
             1,
-
-            $datos['ClvUsu'],
-
+            $clvUsu,
+            $clvPer,
             $datos['ClvCons'] ?? null
-
         ]);
     }
 
@@ -128,11 +131,11 @@ public function obtenerPerfilCompleto(
 
             FROM paciente p
 
-            INNER JOIN usuario u
-                ON p.ClvUsu = u.ClvUsu
-
             INNER JOIN persona per
-                ON u.ClvPer = per.ClvPer
+                ON per.ClvPer = p.ClvPer
+
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
 
             LEFT JOIN direccion d
                 ON per.ClvDir = d.ClvDir
@@ -187,15 +190,15 @@ public function obtenerPerfilCompleto(
                 "SELECT
                     p.ClvPac,
                     p.FotoPerfilPac,
+                    p.ClvPer,
                     u.ClvUsu,
-                    u.ClvPer,
                     per.FotoPerfilPer,
                     per.ClvDir
                  FROM paciente p
-                 INNER JOIN usuario u
-                    ON p.ClvUsu = u.ClvUsu
                  INNER JOIN persona per
-                    ON u.ClvPer = per.ClvPer
+                    ON per.ClvPer = p.ClvPer
+                 INNER JOIN usuario u
+                    ON u.ClvUsu = p.ClvUsu
                  WHERE p.ClvUsu = :clvUsu
                  LIMIT 1
                  FOR UPDATE"
@@ -482,11 +485,11 @@ public function listarParaCrearCita(
             INNER JOIN paciente p
                 ON c.ClvPac = p.ClvPac
 
-            INNER JOIN usuario u
-                ON p.ClvUsu = u.ClvUsu
-
             INNER JOIN persona per
-                ON u.ClvPer = per.ClvPer
+                ON per.ClvPer = p.ClvPer
+
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
 
             WHERE c.ClvPsi = :clvPsi
 
@@ -588,10 +591,10 @@ public function obtenerDatosPersonalesParaPsicologo(
                     TRIM(COALESCE(per.ApMatPer, ''))
                 ) AS NombrePaciente
             FROM paciente p
-            INNER JOIN usuario u
-                ON u.ClvUsu = p.ClvUsu
             INNER JOIN persona per
-                ON per.ClvPer = u.ClvPer
+                ON per.ClvPer = p.ClvPer
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
             LEFT JOIN direccion d
                 ON d.ClvDir = per.ClvDir
             WHERE p.ClvPac = :clvPac
@@ -655,8 +658,8 @@ public function completarInformacionPorPsicologo(
                 per.GeneroPer,
                 per.ClvDir
              FROM paciente p
-             INNER JOIN usuario u ON u.ClvUsu = p.ClvUsu
-             INNER JOIN persona per ON per.ClvPer = u.ClvPer
+             INNER JOIN persona per ON per.ClvPer = p.ClvPer
+             LEFT JOIN usuario u ON u.ClvUsu = p.ClvUsu
              WHERE p.ClvPac = :clvPac
                AND p.ClvCons = :clvCons
              LIMIT 1
@@ -1187,11 +1190,11 @@ public function listarPorPsicologo(
 
             FROM paciente p
 
-            INNER JOIN usuario u
-                ON p.ClvUsu = u.ClvUsu
-
             INNER JOIN persona per
-                ON u.ClvPer = per.ClvPer
+                ON per.ClvPer = p.ClvPer
+
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
 
             INNER JOIN cita c
                 ON c.ClvPac = p.ClvPac
@@ -1770,10 +1773,10 @@ private function sqlBaseCatalogoExpedientes(
                     ) AS act
                 ) AS UltimaActividadFecha
             FROM paciente p
-            INNER JOIN usuario u
-                ON p.ClvUsu = u.ClvUsu
             INNER JOIN persona per
-                ON u.ClvPer = per.ClvPer
+                ON per.ClvPer = p.ClvPer
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
             WHERE EXISTS (
                 SELECT 1
                 FROM cita cAuth
@@ -2278,11 +2281,11 @@ public function obtenerParaPsicologo(
 
             FROM paciente p
 
-            INNER JOIN usuario u
-                ON p.ClvUsu = u.ClvUsu
-
             INNER JOIN persona per
-                ON u.ClvPer = per.ClvPer
+                ON per.ClvPer = p.ClvPer
+
+            LEFT JOIN usuario u
+                ON u.ClvUsu = p.ClvUsu
 
             WHERE p.ClvPac = :clvPac
               AND EXISTS (

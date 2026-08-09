@@ -259,6 +259,7 @@ class AuthService
 
             (new Paciente())->crear([
                 'ClvPac' => $clvPac,
+                'ClvPer' => $clvPer,
                 'ClvUsu' => $clvUsu,
                 'ClvCons' => $clvCons
             ]);
@@ -267,7 +268,11 @@ class AuthService
                 $clvUsu,
                 'REGISTRO',
                 $datos,
-                (string) ($datos['fechaNacimiento'] ?? '')
+                (string) ($datos['fechaNacimiento'] ?? ''),
+                [
+                    'ClvPacSujeto' => $clvPac,
+                    'IdRelacionResponsable' => null,
+                ]
             );
 
             if (empty($consentimiento['ok'])) {

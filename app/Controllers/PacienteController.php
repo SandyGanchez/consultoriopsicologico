@@ -17,6 +17,8 @@ use App\Services\AgendaService;
 use App\Services\CorreoCitaService;
 use App\Services\CuentaService;
 use App\Services\NotificacionService;
+use App\Services\DependienteService;
+use App\Services\EdadService;
 use App\Services\PerfilPacienteService;
 use App\Services\PrivacidadService;
 use PDOException;
@@ -232,7 +234,10 @@ class PacienteController extends Controller
         $citaModel = new Cita();
         $notificacionModel = new Notificacion();
 
-        $citas = $citaModel->obtenerMisCitas($clvPac);
+        $citas = $citaModel->obtenerMisCitas(
+            $clvPac,
+            (string) ($this->usuario['ClvUsu'] ?? '')
+        );
 
         $cancelables = 0;
         $programadas = 0;
@@ -385,6 +390,18 @@ class PacienteController extends Controller
             $servicioPreseleccionado = '';
         }
 
+        $dependientes = (new DependienteService())->listarParaAgendar(
+            (string) ($this->usuario['ClvUsu'] ?? '')
+        );
+        $limitesEdad = (new EdadService())->limitesInput('general');
+        $nombrePropio = trim(
+            ((string) ($this->usuario['NombrePer'] ?? '')) . ' '
+            . ((string) ($this->usuario['ApPatPer'] ?? ''))
+        );
+        if ($nombrePropio === '') {
+            $nombrePropio = 'Yo';
+        }
+
         $this->view(
             'paciente/agendar',
             [
@@ -399,6 +416,14 @@ class PacienteController extends Controller
                 'psicologoPreseleccionado' => $psicologoPreseleccionado,
 
                 'servicioPreseleccionado' => $servicioPreseleccionado,
+
+                'dependientesAgendar' => $dependientes,
+
+                'limitesEdad' => $limitesEdad,
+
+                'nombrePropio' => $nombrePropio,
+
+                'versionAviso' => (new PrivacidadService())->versionVigente(),
 
                 'cargarAgendarCss' => true,
 
@@ -621,6 +646,75 @@ class PacienteController extends Controller
             Response::redirect('paciente');
         }
 
+        $clvUsuSesion = (string) ($this->usuario['ClvUsu'] ?? '');
+        $destino = strtolower(trim((string) ($_POST['destino_cita'] ?? 'yo')));
+        $dependienteService = new DependienteService();
+        $clvPacDestino = '';
+        $origenCita = 'PACIENTE';
+        $idRelacion = null;
+
+        try {
+            if ($destino === 'yo') {
+                $clvPacDestino = (string) ($paciente['ClvPac'] ?? '');
+                $origenCita = 'PACIENTE';
+                $idRelacion = null;
+            } elseif ($destino === 'dependiente') {
+                $clvPacPost = strtoupper(trim((string) ($_POST['clv_pac_destino'] ?? '')));
+                if ($clvPacPost === '' || !preg_match('/^[A-Z0-9]{1,10}$/', $clvPacPost)) {
+                    throw new RuntimeException(
+                        'Selecciona un dependiente válido.'
+                    );
+                }
+                $rel = $dependienteService->relacionParaAgendar(
+                    $clvUsuSesion,
+                    $clvPacPost
+                );
+                if ($rel === null) {
+                    throw new RuntimeException(
+                        'No puedes agendar para esa persona o no tiene permiso activo.'
+                    );
+                }
+                $clvPacDestino = $clvPacPost;
+                $origenCita = 'RESPONSABLE';
+                $idRelacion = (int) ($rel['IdRelacion'] ?? 0);
+            } elseif ($destino === 'nuevo') {
+                $alta = $dependienteService->crear($clvUsuSesion, [
+                    'nombre' => $_POST['dep_nombre'] ?? '',
+                    'apPat' => $_POST['dep_apPat'] ?? '',
+                    'apMat' => $_POST['dep_apMat'] ?? '',
+                    'fechaNacimiento' => $_POST['dep_fechaNacimiento'] ?? '',
+                    'genero' => $_POST['dep_genero'] ?? '',
+                    'parentesco' => $_POST['dep_parentesco'] ?? '',
+                    'EsTutorLegal' => $_POST['dep_EsTutorLegal'] ?? null,
+                    'aviso_leido' => $_POST['dep_aviso_leido'] ?? null,
+                    'consentimiento_sensibles' =>
+                        $_POST['dep_consentimiento_sensibles'] ?? null,
+                ]);
+                if (empty($alta['ok'])) {
+                    throw new RuntimeException(
+                        (string) ($alta['mensaje'] ??
+                            'No se pudo registrar a la persona.')
+                    );
+                }
+                $clvPacDestino = (string) ($alta['clvPac'] ?? '');
+                $origenCita = 'RESPONSABLE';
+                $idRelacion = (int) ($alta['idRelacion'] ?? 0);
+            } else {
+                throw new RuntimeException(
+                    'Indica para quién es la cita.'
+                );
+            }
+
+            if ($clvPacDestino === '') {
+                throw new RuntimeException(
+                    'No se pudo determinar el paciente de la cita.'
+                );
+            }
+        } catch (RuntimeException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            Response::redirect('paciente/agendar');
+        }
+
         $agendaService = new AgendaService();
         $citaModel = new Cita();
 
@@ -670,8 +764,11 @@ class PacienteController extends Controller
 
             $datosReserva['ClvCita'] =
                 $citaModel->generarClaveCita();
-            $datosReserva['ClvPac'] =
-                $paciente['ClvPac'];
+            $datosReserva['ClvPac'] = $clvPacDestino;
+            $datosReserva['ClvUsuCreador'] = $clvUsuSesion;
+            $datosReserva['OrigenCita'] = $origenCita;
+            $datosReserva['IdRelacionResponsable'] =
+                $origenCita === 'RESPONSABLE' ? $idRelacion : null;
 
             $citaModel->crearCita($datosReserva);
 
@@ -693,7 +790,10 @@ class PacienteController extends Controller
                     $envio = $correoCitaService
                         ->procesarConfirmacionesInmediatas($clvCitaCreada);
                     if (
-                        empty($envio['paciente'])
+                        (
+                            empty($envio['paciente'])
+                            || empty($envio['responsable'])
+                        )
                         && !empty($envio['mensajeCorreo'])
                     ) {
                         $mensajeExito .= ' ' . $envio['mensajeCorreo'];
@@ -713,7 +813,9 @@ class PacienteController extends Controller
 
             $_SESSION['success'] = $mensajeExito;
 
-            Response::redirect('paciente/mis-citas');
+            Response::redirect(
+                'paciente/cita-detalle?cita=' . rawurlencode($clvCitaCreada)
+            );
         } catch (PDOException $e) {
             $citaModel->rollbackTransaccion();
 
@@ -771,9 +873,10 @@ public function detalleCita(): void
 
     $citaModel = new Cita();
 
-    $cita = $citaModel->obtenerDetallePaciente(
+    $cita = $citaModel->obtenerDetalleParaCuentaPaciente(
         $clvCita,
-        $paciente['ClvPac']
+        (string) ($paciente['ClvPac'] ?? ''),
+        (string) ($this->usuario['ClvUsu'] ?? '')
     );
 
     if (!$cita) {
@@ -785,6 +888,9 @@ public function detalleCita(): void
     }
 
     $cancelacion = $citaModel->evaluarCancelacionPaciente($cita);
+    $urlIcs = Helper::baseUrl(
+        'paciente/cita-ics?cita=' . rawurlencode($clvCita)
+    );
 
     $this->view(
         'paciente/detalleCita',
@@ -793,6 +899,7 @@ public function detalleCita(): void
             'usuario' => $this->usuario,
             'cita' => $cita,
             'cancelacion' => $cancelacion,
+            'urlIcs' => $urlIcs,
             'csrf' => Session::csrfToken(),
             'cargarCitasCss' => true
         ],
@@ -800,11 +907,59 @@ public function detalleCita(): void
     );
 }
 
+    public function descargarIcsCita(): void
+    {
+        $clvCita = trim((string) ($_GET['cita'] ?? ''));
+        if ($clvCita === '') {
+            Response::redirect('paciente/mis-citas');
+        }
+
+        $pacienteModel = new Paciente();
+        $paciente = $pacienteModel->obtenerPorUsuario(
+            (string) ($this->usuario['ClvUsu'] ?? '')
+        );
+        if (!$paciente) {
+            Response::redirect('paciente');
+        }
+
+        $citaModel = new Cita();
+        $cita = $citaModel->obtenerDetalleParaCuentaPaciente(
+            $clvCita,
+            (string) ($paciente['ClvPac'] ?? ''),
+            (string) ($this->usuario['ClvUsu'] ?? '')
+        );
+        if (!$cita) {
+            $_SESSION['error'] = 'No puedes descargar el calendario de esa cita.';
+            Response::redirect('paciente/mis-citas');
+        }
+
+        try {
+            $ics = (new \App\Services\IcsCitaService())->generarParaCita($clvCita);
+            if ($ics === null) {
+                throw new RuntimeException('No se encontró la cita.');
+            }
+
+            header('Content-Type: text/calendar; charset=utf-8');
+            header(
+                'Content-Disposition: attachment; filename="'
+                . $ics['filename'] . '"'
+            );
+            header('Cache-Control: no-store, no-cache, must-revalidate');
+            echo $ics['contenido'];
+            exit;
+        } catch (\Throwable $e) {
+            $_SESSION['error'] = 'No fue posible generar el archivo de calendario.';
+            Response::redirect(
+                'paciente/cita-detalle?cita=' . rawurlencode($clvCita)
+            );
+        }
+    }
+
     /*
-    =====================================
+=====================================
             HISTORIAL
-    =====================================
-    */
+=====================================
+*/
 
     public function historial(): void
     {
@@ -1487,9 +1642,21 @@ public function cancelarCita(): void
 
     $citaModel = new Cita();
 
+    $citaAutorizada = $citaModel->obtenerDetalleParaCuentaPaciente(
+        $clvCita,
+        (string) ($paciente['ClvPac'] ?? ''),
+        (string) ($this->usuario['ClvUsu'] ?? '')
+    );
+
+    if ($citaAutorizada === null) {
+        $_SESSION['error'] =
+            'La cita no existe o no pertenece a tu cuenta.';
+        Response::redirect('paciente/mis-citas');
+    }
+
     $resultado = $citaModel->cancelarPorPaciente(
         $clvCita,
-        $paciente['ClvPac']
+        (string) ($citaAutorizada['ClvPac'] ?? '')
     );
 
     if ($resultado['ok']) {
@@ -1511,4 +1678,101 @@ public function cancelarCita(): void
 
     Response::redirect('paciente/mis-citas');
 }
+
+    public function dependientes(): void
+    {
+        $clvUsu = (string) ($this->usuario['ClvUsu'] ?? '');
+        $svc = new DependienteService();
+        $lista = $svc->listar($clvUsu);
+        // Dependientes: menores o adultos (política general, no >=18 del registro).
+        $limites = (new EdadService())->limitesInput('general');
+
+        $this->view('paciente/dependientes', [
+            'usuario' => $this->usuario,
+            'dependientes' => $lista,
+            'limitesEdad' => $limites,
+            'versionAviso' => (new PrivacidadService())->versionVigente(),
+        ], 'paciente');
+    }
+
+    public function crearDependiente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            Session::set('error', 'La solicitud no es válida. Intenta nuevamente.');
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        $clvUsu = (string) ($this->usuario['ClvUsu'] ?? '');
+        $resultado = (new DependienteService())->crear($clvUsu, $_POST);
+
+        Session::set(
+            empty($resultado['ok']) ? 'error' : 'success',
+            (string) ($resultado['mensaje'] ?? 'Operación finalizada.')
+        );
+        Response::redirect('paciente/dependientes');
+    }
+
+    public function editarDependiente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            Session::set('error', 'La solicitud no es válida. Intenta nuevamente.');
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        $clvUsu = (string) ($this->usuario['ClvUsu'] ?? '');
+        $idRelacion = (int) ($_POST['idRelacion'] ?? 0);
+        $resultado = (new DependienteService())->editar(
+            $clvUsu,
+            $idRelacion,
+            $_POST
+        );
+
+        Session::set(
+            empty($resultado['ok']) ? 'error' : 'success',
+            (string) ($resultado['mensaje'] ?? 'Operación finalizada.')
+        );
+        Response::redirect('paciente/dependientes');
+    }
+
+    public function cambiarEstadoDependiente(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            Session::set('error', 'La solicitud no es válida. Intenta nuevamente.');
+            Response::redirect('paciente/dependientes');
+            return;
+        }
+
+        $clvUsu = (string) ($this->usuario['ClvUsu'] ?? '');
+        $idRelacion = (int) ($_POST['idRelacion'] ?? 0);
+        $estado = strtoupper(trim((string) ($_POST['estado'] ?? '')));
+
+        $resultado = (new DependienteService())->cambiarEstado(
+            $clvUsu,
+            $idRelacion,
+            $estado
+        );
+
+        Session::set(
+            empty($resultado['ok']) ? 'error' : 'success',
+            (string) ($resultado['mensaje'] ?? 'Operación finalizada.')
+        );
+        Response::redirect('paciente/dependientes');
+    }
 }

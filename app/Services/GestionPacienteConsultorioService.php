@@ -37,9 +37,12 @@ class GestionPacienteConsultorioService extends Model
     ): bool {
         $sql = "SELECT 1
                 FROM paciente pac
-                INNER JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
+                LEFT JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
                 WHERE pac.ClvPac = :clvPac
-                  AND usu.RolUsu = 'PACIENTE'
+                  AND (
+                        usu.ClvUsu IS NULL
+                     OR usu.RolUsu = 'PACIENTE'
+                  )
                   AND (
                         pac.ClvCons = :clvCons
                      OR EXISTS (
@@ -81,24 +84,29 @@ class GestionPacienteConsultorioService extends Model
 
         $pac = $this->obtenerPacienteBasico($clvPac);
         $clvPacReal = (string) $pac['ClvPac'];
+        $clvUsuPac = trim((string) ($pac['ClvUsu'] ?? ''));
+        $tieneCuenta = $clvUsuPac !== '';
         $conteos = $this->contarDependenciasCompletas($clvPacReal, $clvCons);
         $tieneActividadHistorica = $this->esActividadHistorica($conteos);
         $exclusivo = $this->esExclusivoDelConsultorio($clvPacReal, $clvCons);
-        $pendiente = $this->esPendienteActivacion($pac);
-        $estadoUsu = (int) $pac['EstadoUsu'];
+        $pendiente = $tieneCuenta && $this->esPendienteActivacion($pac);
+        $estadoUsu = $tieneCuenta ? (int) ($pac['EstadoUsu'] ?? 0) : null;
         $estadoPac = (int) $pac['EstadoActivoPac'];
-        $activo = $estadoUsu === 1 && $estadoPac === 1;
+        $activo = $tieneCuenta
+            ? ($estadoUsu === 1 && $estadoPac === 1)
+            : ($estadoPac === 1);
 
         $puedeEliminar = !$tieneActividadHistorica
             && (int) ($conteos['totalSolicitudesPrivacidad'] ?? 0) === 0;
 
         return array_merge($conteos, [
             'ClvPac' => $clvPacReal,
-            'ClvUsu' => (string) $pac['ClvUsu'],
+            'ClvUsu' => $clvUsuPac !== '' ? $clvUsuPac : null,
             'ClvPer' => (string) $pac['ClvPer'],
             'ClvConsPaciente' => (string) ($pac['ClvCons'] ?? ''),
             'EstadoUsu' => $estadoUsu,
             'EstadoActivoPac' => $estadoPac,
+            'SinCuenta' => !$tieneCuenta,
             'RequiereCambioContrasena' => (int) ($pac['RequiereCambioContrasena'] ?? 0),
             'FechaRegistroPac' => (string) ($pac['FechaRegistroPac'] ?? ''),
             'NombrePer' => (string) ($pac['NombrePer'] ?? ''),
@@ -143,7 +151,10 @@ class GestionPacienteConsultorioService extends Model
         $pagina = max(1, (int) ($filtros['pagina'] ?? 1));
 
         $ambito = $this->sqlAmbitoConsultorio('pac');
-        $where = ["usu.RolUsu = 'PACIENTE'", $ambito];
+        $where = [
+            "(usu.ClvUsu IS NULL OR usu.RolUsu = 'PACIENTE')",
+            $ambito,
+        ];
         $params = [
             'clvCons' => $clvCons,
             'clvCons2' => $clvCons,
@@ -153,7 +164,7 @@ class GestionPacienteConsultorioService extends Model
         if ($q !== '') {
             $where[] = '(
                 pac.ClvPac LIKE :q
-                OR usu.CorreoUsu LIKE :q
+                OR IFNULL(usu.CorreoUsu, \'\') LIKE :q
                 OR per.NombrePer LIKE :q
                 OR per.ApPatPer LIKE :q
                 OR per.ApMatPer LIKE :q
@@ -163,9 +174,9 @@ class GestionPacienteConsultorioService extends Model
         }
 
         if ($estado === 'activo') {
-            $where[] = 'usu.EstadoUsu = 1 AND pac.EstadoActivoPac = 1';
+            $where[] = 'pac.EstadoActivoPac = 1 AND (usu.ClvUsu IS NULL OR usu.EstadoUsu = 1)';
         } elseif ($estado === 'inactivo') {
-            $where[] = '(usu.EstadoUsu = 0 OR pac.EstadoActivoPac = 0)';
+            $where[] = '(pac.EstadoActivoPac = 0 OR (usu.ClvUsu IS NOT NULL AND usu.EstadoUsu = 0))';
         }
 
         if ($actividad === 'sin_actividad') {
@@ -189,8 +200,8 @@ class GestionPacienteConsultorioService extends Model
 
         $sqlCount = "SELECT COUNT(*)
                      FROM paciente pac
-                     INNER JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
-                     INNER JOIN persona per ON per.ClvPer = usu.ClvPer
+                     INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                     LEFT JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
                      WHERE {$whereSql}";
 
         $stmtCount = $this->db->prepare($sqlCount);
@@ -240,8 +251,8 @@ class GestionPacienteConsultorioService extends Model
                           AND hx.ClvCons <> ''
                     ) AS TieneHistorialOtroCons
                 FROM paciente pac
-                INNER JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = usu.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
                 WHERE {$whereSql}
                 ORDER BY pac.FechaRegistroPac DESC, pac.ClvPac ASC
                 LIMIT {$limite} OFFSET {$offset}";
@@ -259,10 +270,13 @@ class GestionPacienteConsultorioService extends Model
             $totalGlobales = (int) ($fila['TotalCitasGlobales'] ?? 0);
             $totalCons = (int) ($fila['TotalCitasConsultorio'] ?? 0);
             $tieneExpediente = (int) ($fila['TieneExpediente'] ?? 0) === 1;
-            $estadoUsu = (int) ($fila['EstadoUsu'] ?? 0);
+            $tieneCuenta = trim((string) ($fila['ClvUsu'] ?? '')) !== '';
+            $estadoUsu = $tieneCuenta ? (int) ($fila['EstadoUsu'] ?? 0) : null;
             $estadoPac = (int) ($fila['EstadoActivoPac'] ?? 0);
-            $activo = $estadoUsu === 1 && $estadoPac === 1;
-            $pendiente = $estadoUsu === 0
+            $activo = $estadoPac === 1
+                && (!$tieneCuenta || $estadoUsu === 1);
+            $pendiente = $tieneCuenta
+                && $estadoUsu === 0
                 && (int) ($fila['RequiereCambioContrasena'] ?? 0) === 1;
             $tieneActividad = $totalGlobales > 0 || $tieneExpediente;
 
@@ -429,7 +443,10 @@ class GestionPacienteConsultorioService extends Model
                 );
             }
 
-            if ((int) $pac['EstadoUsu'] === 0 && (int) $pac['EstadoActivoPac'] === 0) {
+            $clvUsuPac = trim((string) ($pac['ClvUsu'] ?? ''));
+            $yaInactivo = (int) $pac['EstadoActivoPac'] === 0
+                && ($clvUsuPac === '' || (int) ($pac['EstadoUsu'] ?? 0) === 0);
+            if ($yaInactivo) {
                 throw new RuntimeException('El paciente ya está inactivo.');
             }
 
@@ -442,11 +459,13 @@ class GestionPacienteConsultorioService extends Model
                 'UPDATE paciente SET EstadoActivoPac = 0 WHERE ClvPac = :clvPac'
             )->execute(['clvPac' => (string) $pac['ClvPac']]);
 
-            $this->db->prepare(
-                "UPDATE usuario
-                 SET EstadoUsu = 0
-                 WHERE ClvUsu = :clvUsu AND RolUsu = 'PACIENTE'"
-            )->execute(['clvUsu' => (string) $pac['ClvUsu']]);
+            if ($clvUsuPac !== '') {
+                $this->db->prepare(
+                    "UPDATE usuario
+                     SET EstadoUsu = 0
+                     WHERE ClvUsu = :clvUsu AND RolUsu = 'PACIENTE'"
+                )->execute(['clvUsu' => $clvUsuPac]);
+            }
 
             $this->db->commit();
 
@@ -499,7 +518,10 @@ class GestionPacienteConsultorioService extends Model
                 );
             }
 
-            if ((int) $pac['EstadoUsu'] === 1 && (int) $pac['EstadoActivoPac'] === 1) {
+            $clvUsuPac = trim((string) ($pac['ClvUsu'] ?? ''));
+            $yaActivo = (int) $pac['EstadoActivoPac'] === 1
+                && ($clvUsuPac === '' || (int) ($pac['EstadoUsu'] ?? 0) === 1);
+            if ($yaActivo) {
                 throw new RuntimeException('El paciente ya está activo.');
             }
 
@@ -507,19 +529,21 @@ class GestionPacienteConsultorioService extends Model
                 'UPDATE paciente SET EstadoActivoPac = 1 WHERE ClvPac = :clvPac'
             )->execute(['clvPac' => (string) $pac['ClvPac']]);
 
-            $stmtUsu = $this->db->prepare(
-                "UPDATE usuario
-                 SET EstadoUsu = 1
-                 WHERE ClvUsu = :clvUsu
-                   AND RolUsu = 'PACIENTE'
-                   AND RequiereCambioContrasena = 0"
-            );
-            $stmtUsu->execute(['clvUsu' => (string) $pac['ClvUsu']]);
-
-            if ($stmtUsu->rowCount() < 1) {
-                throw new RuntimeException(
-                    'No fue posible reactivar la cuenta del paciente.'
+            if ($clvUsuPac !== '') {
+                $stmtUsu = $this->db->prepare(
+                    "UPDATE usuario
+                     SET EstadoUsu = 1
+                     WHERE ClvUsu = :clvUsu
+                       AND RolUsu = 'PACIENTE'
+                       AND RequiereCambioContrasena = 0"
                 );
+                $stmtUsu->execute(['clvUsu' => $clvUsuPac]);
+
+                if ($stmtUsu->rowCount() < 1) {
+                    throw new RuntimeException(
+                        'No fue posible reactivar la cuenta del paciente.'
+                    );
+                }
             }
 
             $this->db->commit();
@@ -553,7 +577,7 @@ class GestionPacienteConsultorioService extends Model
 
             $pac = $this->bloquearPacienteEnAmbito($clvPac, $clvCons);
             $clvPacReal = (string) $pac['ClvPac'];
-            $clvUsu = (string) $pac['ClvUsu'];
+            $clvUsu = trim((string) ($pac['ClvUsu'] ?? ''));
             $clvPer = (string) $pac['ClvPer'];
 
             $conteos = $this->contarDependenciasCompletas($clvPacReal, $clvCons);
@@ -584,13 +608,27 @@ class GestionPacienteConsultorioService extends Model
                 );
             }
 
-            $this->eliminarActivacionesUsuario($clvUsu);
-            $this->eliminarRecuperacionesUsuario($clvUsu);
-            $this->eliminarNotificacionesUsuario($clvUsu);
-            $this->eliminarConsentimientosUsuario($clvUsu);
-            $this->limpiarInvitacionesComoInvitador($clvUsu);
-            $this->limpiarCorreosCitaUsuario($clvUsu);
-            $this->limpiarIncidenciasUsuario($clvUsu);
+            $relActivas = (int) $this->db->query(
+                "SELECT COUNT(*) FROM paciente_responsable
+                 WHERE ClvPac = " . $this->db->quote($clvPacReal)
+            )->fetchColumn();
+            if ($relActivas > 0) {
+                throw new RuntimeException(
+                    'Este paciente tiene relaciones de responsabilidad. '
+                    . 'Inactiva la relación desde el panel del responsable; '
+                    . 'no se elimina físicamente.'
+                );
+            }
+
+            if ($clvUsu !== '') {
+                $this->eliminarActivacionesUsuario($clvUsu);
+                $this->eliminarRecuperacionesUsuario($clvUsu);
+                $this->eliminarNotificacionesUsuario($clvUsu);
+                $this->eliminarConsentimientosUsuario($clvUsu);
+                $this->limpiarInvitacionesComoInvitador($clvUsu);
+                $this->limpiarCorreosCitaUsuario($clvUsu);
+                $this->limpiarIncidenciasUsuario($clvUsu);
+            }
 
             $stmtPac = $this->db->prepare(
                 'DELETE FROM paciente WHERE ClvPac = :clvPac'
@@ -603,7 +641,7 @@ class GestionPacienteConsultorioService extends Model
                 );
             }
 
-            if (!$this->usuarioTieneOtrasRelaciones($clvUsu)) {
+            if ($clvUsu !== '' && !$this->usuarioTieneOtrasRelaciones($clvUsu)) {
                 $stmtUsu = $this->db->prepare(
                     "DELETE FROM usuario WHERE ClvUsu = :clvUsu AND RolUsu = 'PACIENTE'"
                 );
@@ -618,6 +656,16 @@ class GestionPacienteConsultorioService extends Model
                     if ($clvDir !== null && $clvDir !== '') {
                         $this->eliminarDireccionSiHuerfana($clvDir);
                     }
+                }
+            } elseif ($clvUsu === '' && !$this->personaTieneOtrosUsuarios($clvPer)) {
+                // Dependiente sin cuenta: eliminar persona si quedó huérfana.
+                $clvDir = $this->obtenerClvDirPersona($clvPer);
+                $this->db->prepare(
+                    'DELETE FROM persona WHERE ClvPer = :clvPer'
+                )->execute(['clvPer' => $clvPer]);
+
+                if ($clvDir !== null && $clvDir !== '') {
+                    $this->eliminarDireccionSiHuerfana($clvDir);
                 }
             }
 
@@ -875,21 +923,21 @@ class GestionPacienteConsultorioService extends Model
                     pac.ClvPac,
                     pac.ClvUsu,
                     pac.ClvCons,
+                    pac.ClvPer,
                     pac.FechaRegistroPac,
                     pac.EstadoActivoPac,
                     usu.EstadoUsu,
                     usu.RequiereCambioContrasena,
                     usu.CorreoUsu,
                     usu.TelefonoUsu,
-                    usu.ClvPer,
                     per.NombrePer,
                     per.ApPatPer,
                     per.ApMatPer
                 FROM paciente pac
-                INNER JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = usu.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
                 WHERE pac.ClvPac = :clvPac
-                  AND usu.RolUsu = 'PACIENTE'
+                  AND (usu.ClvUsu IS NULL OR usu.RolUsu = 'PACIENTE')
                 LIMIT 1";
 
         $stmt = $this->db->prepare($sql);
@@ -920,21 +968,21 @@ class GestionPacienteConsultorioService extends Model
                     pac.ClvPac,
                     pac.ClvUsu,
                     pac.ClvCons,
+                    pac.ClvPer,
                     pac.FechaRegistroPac,
                     pac.EstadoActivoPac,
                     usu.EstadoUsu,
                     usu.RequiereCambioContrasena,
                     usu.CorreoUsu,
                     usu.TelefonoUsu,
-                    usu.ClvPer,
                     per.NombrePer,
                     per.ApPatPer,
                     per.ApMatPer
                 FROM paciente pac
-                INNER JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
-                INNER JOIN persona per ON per.ClvPer = usu.ClvPer
+                INNER JOIN persona per ON per.ClvPer = pac.ClvPer
+                LEFT JOIN usuario usu ON usu.ClvUsu = pac.ClvUsu
                 WHERE pac.ClvPac = :clvPac
-                  AND usu.RolUsu = 'PACIENTE'
+                  AND (usu.ClvUsu IS NULL OR usu.RolUsu = 'PACIENTE')
                 LIMIT 1
                 FOR UPDATE";
 

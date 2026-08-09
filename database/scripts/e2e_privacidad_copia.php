@@ -130,6 +130,7 @@ $pdo->prepare('UPDATE usuario SET EstadoUsu=1, RequiereCambioContrasena=0 WHERE 
     ->execute(['u' => $clvUsu]);
 (new Paciente())->crear([
     'ClvPac' => $clvPac,
+    'ClvPer' => $clvPer,
     'ClvUsu' => $clvUsu,
     'ClvCons' => $responsable['clv_cons']
 ]);
@@ -194,6 +195,7 @@ $pdo->prepare('UPDATE usuario SET EstadoUsu=1, RequiereCambioContrasena=0 WHERE 
     ->execute(['u' => $clvUsu2]);
 (new Paciente())->crear([
     'ClvPac' => $clvPac2,
+    'ClvPer' => $clvPer2,
     'ClvUsu' => $clvUsu2,
     'ClvCons' => $responsable['clv_cons']
 ]);
@@ -238,6 +240,7 @@ $clvPac3 = ClaveService::generar('paciente', 'ClvPac', 'PAC');
 $pdo->prepare('UPDATE usuario SET EstadoUsu=1 WHERE ClvUsu=:u')->execute(['u' => $clvUsu3]);
 (new Paciente())->crear([
     'ClvPac' => $clvPac3,
+    'ClvPer' => $clvPer3,
     'ClvUsu' => $clvUsu3,
     'ClvCons' => $responsable['clv_cons']
 ]);
@@ -406,6 +409,7 @@ $clvPacM = ClaveService::generar('paciente', 'ClvPac', 'PAC');
 $pdo->prepare('UPDATE usuario SET EstadoUsu=1 WHERE ClvUsu=:u')->execute(['u' => $clvUsuM]);
 (new Paciente())->crear([
     'ClvPac' => $clvPacM,
+    'ClvPer' => $clvPerM,
     'ClvUsu' => $clvUsuM,
     'ClvCons' => $clvCons
 ]);

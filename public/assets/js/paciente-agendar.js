@@ -1060,7 +1060,7 @@
         cambiarMes(1);
     });
 
-    formAgendar.addEventListener('submit', function () {
+    formAgendar.addEventListener('submit', function (ev) {
         if (
             psicologoSelect.value === '' ||
             servicioInput.value === '' ||
@@ -1070,11 +1070,124 @@
             return;
         }
 
+        var destinoRadio = formAgendar.querySelector('input[name="destino_cita"]:checked');
+        var destino = destinoRadio ? destinoRadio.value : 'yo';
+        var clvPacInput = document.getElementById('clvPacDestino');
+
+        if (destino === 'dependiente') {
+            var clvDep = (destinoRadio.getAttribute('data-clv-pac') || '').trim();
+            if (!clvDep) {
+                ev.preventDefault();
+                window.alert('Selecciona un dependiente válido.');
+                return;
+            }
+            if (clvPacInput) {
+                clvPacInput.value = clvDep;
+            }
+        }
+
+        if (destino === 'nuevo') {
+            var reqIds = [
+                'dep_nombre',
+                'dep_apPat',
+                'dep_fechaNacimiento',
+                'dep_genero',
+                'dep_parentesco'
+            ];
+            for (var i = 0; i < reqIds.length; i++) {
+                var el = document.getElementById(reqIds[i]);
+                if (!el || String(el.value || '').trim() === '') {
+                    ev.preventDefault();
+                    window.alert('Completa los datos de la persona para quien agendas.');
+                    return;
+                }
+            }
+            var aviso = document.getElementById('dep_aviso_leido');
+            var cons = document.getElementById('dep_consentimiento_sensibles');
+            if (!aviso || !aviso.checked || !cons || !cons.checked) {
+                ev.preventDefault();
+                window.alert('Debes aceptar el aviso de privacidad y el consentimiento.');
+                return;
+            }
+        }
+
         document.querySelectorAll('.btn-confirm-appointment').forEach(function (boton) {
             boton.disabled = true;
             boton.textContent = 'Procesando…';
         });
     });
+
+    (function initForWhom() {
+        var radios = formAgendar.querySelectorAll('input[name="destino_cita"]');
+        var panelNuevo = document.getElementById('formNuevoDependiente');
+        var clvPacInput = document.getElementById('clvPacDestino');
+        var clvPacPropio = clvPacInput ? clvPacInput.value : '';
+        var fechaNac = document.getElementById('dep_fechaNacimiento');
+        var tutorWrap = document.getElementById('depTutorWrap');
+
+        function syncForWhom() {
+            var seleccionado = formAgendar.querySelector('input[name="destino_cita"]:checked');
+            var modo = seleccionado ? seleccionado.value : 'yo';
+
+            if (panelNuevo) {
+                var esNuevo = modo === 'nuevo';
+                panelNuevo.classList.toggle('d-none', !esNuevo);
+                panelNuevo.hidden = !esNuevo;
+                panelNuevo.querySelectorAll('input, select').forEach(function (campo) {
+                    if (esNuevo) {
+                        if (campo.id === 'dep_nombre' || campo.id === 'dep_apPat'
+                            || campo.id === 'dep_fechaNacimiento' || campo.id === 'dep_genero'
+                            || campo.id === 'dep_parentesco'
+                            || campo.id === 'dep_aviso_leido'
+                            || campo.id === 'dep_consentimiento_sensibles') {
+                            campo.required = true;
+                        }
+                    } else {
+                        campo.required = false;
+                    }
+                });
+            }
+
+            if (clvPacInput) {
+                if (modo === 'yo') {
+                    clvPacInput.value = clvPacPropio;
+                } else if (modo === 'dependiente' && seleccionado) {
+                    clvPacInput.value = (seleccionado.getAttribute('data-clv-pac') || '').trim();
+                } else {
+                    clvPacInput.value = '';
+                }
+            }
+        }
+
+        function syncTutorPorEdad() {
+            if (!fechaNac || !tutorWrap) {
+                return;
+            }
+            var v = (fechaNac.value || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                return;
+            }
+            var parts = v.split('-');
+            var nac = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            var hoy = new Date();
+            var edad = hoy.getFullYear() - nac.getFullYear();
+            var m = hoy.getMonth() - nac.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) {
+                edad--;
+            }
+            tutorWrap.classList.toggle('d-none', edad >= 18);
+        }
+
+        radios.forEach(function (r) {
+            r.addEventListener('change', syncForWhom);
+        });
+        if (fechaNac) {
+            fechaNac.addEventListener('change', syncTutorPorEdad);
+            fechaNac.addEventListener('input', syncTutorPorEdad);
+        }
+        syncForWhom();
+        syncTutorPorEdad();
+    })();
 
     renderCalendario();
     actualizarResumen();

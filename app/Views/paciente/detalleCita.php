@@ -272,6 +272,15 @@ if ($estado === 'PROGRAMADA') {
         <?php endif; ?>
 
         <div class="paciente-detail-actions">
+            <?php if (!empty($urlIcs) && $estado === 'PROGRAMADA'): ?>
+                <a
+                    class="paciente-btn paciente-btn-primary"
+                    href="<?= $escapar($urlIcs); ?>"
+                >
+                    Agregar al calendario
+                </a>
+            <?php endif; ?>
+
             <a
                 class="paciente-btn paciente-btn-secondary"
                 href="<?= $escapar(Helper::baseUrl('paciente/mis-citas')); ?>"
