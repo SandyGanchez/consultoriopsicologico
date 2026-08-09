@@ -45,6 +45,32 @@ class AccesoSesionService
                 Response::redirect('login');
             }
 
+            if ($motivo === 'correo_no_verificado') {
+                $sesion = Session::get('usuario');
+                $correo = is_array($sesion)
+                    ? (string) ($sesion['CorreoUsu'] ?? '')
+                    : '';
+                $clvUsu = is_array($sesion)
+                    ? (string) ($sesion['ClvUsu'] ?? '')
+                    : '';
+
+                Session::remove('usuario');
+                Session::regenerar();
+
+                if ($clvUsu !== '' && $correo !== '') {
+                    (new VerificacionCorreoService())->iniciarDesdeLogin(
+                        $clvUsu,
+                        $correo
+                    );
+                }
+
+                Session::set(
+                    'error',
+                    (string) ($eval['mensaje'] ?? 'Debes verificar tu correo para continuar.')
+                );
+                Response::redirect('verificar-correo');
+            }
+
             Session::destroy();
             Session::regenerar();
             Response::redirect('login');
@@ -114,6 +140,19 @@ class AccesoSesionService
             return ['ok' => false, 'motivo' => 'inactiva'];
         }
 
+        // Sesión no debe persistir si el paciente aún no verificó correo.
+        if (
+            $rol === 'PACIENTE'
+            && array_key_exists('CorreoVerificado', $usuario)
+            && (int) ($usuario['CorreoVerificado'] ?? 0) === 0
+        ) {
+            return [
+                'ok' => false,
+                'motivo' => 'correo_no_verificado',
+                'mensaje' => 'Debes verificar tu correo para continuar.',
+            ];
+        }
+
         if ($rol === 'CONSULTORIO') {
             $vinculo = $this->obtenerVinculoConsultorio($clvUsu);
 
@@ -169,15 +208,27 @@ class AccesoSesionService
         }
 
         $db = Database::connect();
+        $cols = 'ClvUsu, CorreoUsu, TelefonoUsu, EstadoUsu, RequiereCambioContrasena, RolUsu, ClvPer';
+
+        static $tieneCorreoVerificado = null;
+        if ($tieneCorreoVerificado === null) {
+            $chk = $db->prepare(
+                'SELECT COUNT(*)
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = \'usuario\'
+                   AND COLUMN_NAME = \'CorreoVerificado\''
+            );
+            $chk->execute();
+            $tieneCorreoVerificado = (int) $chk->fetchColumn() > 0;
+        }
+
+        if ($tieneCorreoVerificado) {
+            $cols .= ', CorreoVerificado, FechaVerificacionCorreo';
+        }
+
         $stmt = $db->prepare(
-            "SELECT
-                ClvUsu,
-                CorreoUsu,
-                TelefonoUsu,
-                EstadoUsu,
-                RequiereCambioContrasena,
-                RolUsu,
-                ClvPer
+            "SELECT {$cols}
              FROM usuario
              WHERE ClvUsu = :u
              LIMIT 1"

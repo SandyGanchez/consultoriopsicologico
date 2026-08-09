@@ -52,6 +52,11 @@ return [
             'register'
         ],
 
+        '/verificar-correo' => [
+            AuthController::class,
+            'mostrarVerificarCorreo'
+        ],
+
         '/cambiar-contrasena' => [
             AuthController::class,
             'changeTemporaryPassword'
@@ -552,6 +557,16 @@ return [
         '/registro' => [
             AuthController::class,
             'guardar'
+        ],
+
+        '/verificar-correo' => [
+            AuthController::class,
+            'verificarCorreo'
+        ],
+
+        '/verificar-correo/reenviar' => [
+            AuthController::class,
+            'reenviarCodigoVerificacion'
         ],
 
         '/cambiar-contrasena' => [

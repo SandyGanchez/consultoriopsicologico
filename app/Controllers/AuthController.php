@@ -11,6 +11,7 @@ use App\Models\Usuario;
 use App\Services\AuthService;
 use App\Services\InstalacionConsultorioService;
 use App\Services\PerfilPacienteService;
+use App\Services\VerificacionCorreoService;
 
 class AuthController extends Controller
 {
@@ -83,6 +84,32 @@ class AuthController extends Controller
     {
         $datos = $this->datosVistaAuthConsultorio('Crear cuenta', 'registro');
         unset($datos['correoIngresado']);
+
+        return $datos;
+    }
+
+    /**
+     * Misma identidad visual que login/registro (consultorio, no PsicoMatch).
+     *
+     * @return array<string, mixed>
+     */
+    private function datosVistaVerificarCorreo(): array
+    {
+        $datos = $this->datosVistaAuthConsultorio(
+            'Verificar correo',
+            'verificar-correo'
+        );
+        unset($datos['correoIngresado']);
+
+        $svc = new VerificacionCorreoService();
+        $ctx = $svc->obtenerContextoSesion();
+
+        $datos['correoMascarado'] = is_array($ctx)
+            ? (string) ($ctx['correo_mascarado'] ?? '')
+            : '';
+        $datos['segundosCooldown'] = is_array($ctx)
+            ? $svc->segundosCooldownRestantes((string) ($ctx['ClvUsu'] ?? ''))
+            : 0;
 
         return $datos;
     }
@@ -496,6 +523,41 @@ public function saveTemporaryPassword(): void
 
     $usuario = $resultado['usuario'];
 
+    $rol = strtoupper(
+        trim((string) ($usuario['RolUsu'] ?? ''))
+    );
+
+    // Paciente con correo pendiente: sin sesión autenticada.
+    if (
+        $rol === 'PACIENTE'
+        && array_key_exists('CorreoVerificado', $usuario)
+        && (int) ($usuario['CorreoVerificado'] ?? 0) === 0
+    ) {
+        if (Session::has('usuario')) {
+            Session::remove('usuario');
+        }
+
+        $nombre = trim(
+            ((string) ($usuario['NombrePer'] ?? '')) . ' '
+            . ((string) ($usuario['ApPatPer'] ?? ''))
+        );
+
+        $envio = (new VerificacionCorreoService())->iniciarDesdeLogin(
+            (string) ($usuario['ClvUsu'] ?? ''),
+            (string) ($usuario['CorreoUsu'] ?? $correo),
+            $nombre
+        );
+
+        Session::set(
+            'success',
+            (string) ($envio['mensaje'] ??
+                'Debes verificar tu correo para continuar.')
+        );
+
+        Response::redirect('verificar-correo');
+        return;
+    }
+
     Session::regenerar();
 
     Session::set(
@@ -507,10 +569,6 @@ public function saveTemporaryPassword(): void
         Response::redirect('cambiar-contrasena');
         return;
     }
-
-    $rol = strtoupper(
-        trim((string) ($usuario['RolUsu'] ?? ''))
-    );
 
     if ($rol === 'PACIENTE') {
         if (
@@ -577,6 +635,111 @@ public function saveTemporaryPassword(): void
 
         $service = new AuthService();
         $service->registrar($_POST);
+    }
+
+    public function mostrarVerificarCorreo(): void
+    {
+        if (Session::has('usuario')) {
+            $usuario = Session::get('usuario');
+            $rol = strtoupper(
+                trim((string) (is_array($usuario) ? ($usuario['RolUsu'] ?? '') : ''))
+            );
+            if ($rol !== '') {
+                Response::redirect(Helper::rutaPanelPorRol($rol));
+                return;
+            }
+        }
+
+        $svc = new VerificacionCorreoService();
+        if ($svc->obtenerContextoSesion() === null) {
+            Session::set(
+                'error',
+                'No hay una verificación pendiente. Inicia sesión o regístrate.'
+            );
+            Response::redirect('login');
+            return;
+        }
+
+        $this->view(
+            'auth/verificar-correo',
+            $this->datosVistaVerificarCorreo()
+        );
+    }
+
+    public function verificarCorreo(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            Session::set(
+                'error',
+                'La solicitud no es válida. Intenta nuevamente.'
+            );
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        $codigo = trim((string) ($_POST['codigo'] ?? ''));
+        $resultado = (new VerificacionCorreoService())->validarCodigo($codigo);
+
+        if (empty($resultado['ok'])) {
+            Session::set(
+                'error',
+                (string) ($resultado['mensaje'] ?? 'No fue posible verificar el código.')
+            );
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        /** @var array<string, mixed> $usuario */
+        $usuario = $resultado['usuario'];
+
+        Session::regenerar();
+        Session::set('usuario', $usuario);
+
+        Session::set(
+            'success',
+            (string) ($resultado['mensaje'] ?? 'Correo verificado correctamente.')
+        );
+
+        Response::redirect(Helper::rutaPanelPorRol('PACIENTE'));
+    }
+
+    public function reenviarCodigoVerificacion(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        if (!Session::validarCsrf($_POST['csrf_token'] ?? null)) {
+            Session::set(
+                'error',
+                'La solicitud no es válida. Intenta nuevamente.'
+            );
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        $resultado = (new VerificacionCorreoService())->reenviar();
+
+        if (empty($resultado['ok'])) {
+            Session::set(
+                'error',
+                (string) ($resultado['mensaje'] ?? 'No fue posible reenviar el código.')
+            );
+            Response::redirect('verificar-correo');
+            return;
+        }
+
+        Session::set(
+            'success',
+            (string) ($resultado['mensaje'] ?? 'Te enviamos un nuevo código.')
+        );
+        Response::redirect('verificar-correo');
     }
 
 public function forgotPassword(): void

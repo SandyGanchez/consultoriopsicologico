@@ -204,11 +204,21 @@ public function actualizarContrasenaYLiberarCambio(
                 throw new \RuntimeException('CORREO_DUPLICADO');
             }
 
-            $update = $this->db->prepare(
-                "UPDATE usuario
-                 SET CorreoUsu = :correo
-                 WHERE ClvUsu = :clvUsu"
-            );
+            if ($this->tieneColumnaCorreoVerificado()) {
+                $update = $this->db->prepare(
+                    "UPDATE usuario
+                     SET CorreoUsu = :correo,
+                         CorreoVerificado = 1,
+                         FechaVerificacionCorreo = NOW()
+                     WHERE ClvUsu = :clvUsu"
+                );
+            } else {
+                $update = $this->db->prepare(
+                    "UPDATE usuario
+                     SET CorreoUsu = :correo
+                     WHERE ClvUsu = :clvUsu"
+                );
+            }
 
             $update->execute([
                 'correo' => $correoNuevo,
@@ -227,12 +237,40 @@ public function actualizarContrasenaYLiberarCambio(
 
     public function crear(array $datos): void
     {
+        if ($this->tieneColumnaCorreoVerificado()) {
+            $stmt = $this->db->prepare(
+                "INSERT INTO usuario (
+                    ClvUsu,
+                    CorreoUsu,
+                    TelefonoUsu,
+                    ContrasenaUsu,
+                    EstadoUsu,
+                    RequiereCambioContrasena,
+                    CorreoVerificado,
+                    FechaVerificacionCorreo,
+                    ClvPer,
+                    RolUsu
+                ) VALUES (?,?,?,?,?,?,?,?,?,?)"
+            );
+
+            $stmt->execute([
+                $datos['ClvUsu'],
+                $datos['CorreoUsu'],
+                $datos['TelefonoUsu'],
+                $datos['ContrasenaUsu'],
+                1,
+                0,
+                0,
+                null,
+                $datos['ClvPer'],
+                'PACIENTE'
+            ]);
+
+            return;
+        }
+
         $stmt = $this->db->prepare(
-
-            "INSERT INTO usuario
-
-            (
-
+            "INSERT INTO usuario (
                 ClvUsu,
                 CorreoUsu,
                 TelefonoUsu,
@@ -241,17 +279,10 @@ public function actualizarContrasenaYLiberarCambio(
                 RequiereCambioContrasena,
                 ClvPer,
                 RolUsu
-
-            )
-
-            VALUES
-
-            (?,?,?,?,?,?,?,?)"
-
+            ) VALUES (?,?,?,?,?,?,?,?)"
         );
 
         $stmt->execute([
-
             $datos['ClvUsu'],
             $datos['CorreoUsu'],
             $datos['TelefonoUsu'],
@@ -260,7 +291,6 @@ public function actualizarContrasenaYLiberarCambio(
             0,
             $datos['ClvPer'],
             'PACIENTE'
-
         ]);
     }
 
@@ -323,12 +353,23 @@ public function actualizarContrasenaYLiberarCambio(
         string $clvUsu,
         string $passwordHash
     ): bool {
-        $sql = "UPDATE usuario
-                SET
-                    ContrasenaUsu = :password,
-                    EstadoUsu = 1,
-                    RequiereCambioContrasena = 0
-                WHERE ClvUsu = :clvUsu";
+        if ($this->tieneColumnaCorreoVerificado()) {
+            $sql = "UPDATE usuario
+                    SET
+                        ContrasenaUsu = :password,
+                        EstadoUsu = 1,
+                        RequiereCambioContrasena = 0,
+                        CorreoVerificado = 1,
+                        FechaVerificacionCorreo = COALESCE(FechaVerificacionCorreo, NOW())
+                    WHERE ClvUsu = :clvUsu";
+        } else {
+            $sql = "UPDATE usuario
+                    SET
+                        ContrasenaUsu = :password,
+                        EstadoUsu = 1,
+                        RequiereCambioContrasena = 0
+                    WHERE ClvUsu = :clvUsu";
+        }
 
         $stmt = $this->db->prepare($sql);
 
@@ -336,5 +377,26 @@ public function actualizarContrasenaYLiberarCambio(
             'password' => $passwordHash,
             'clvUsu' => trim($clvUsu)
         ]);
+    }
+
+    private function tieneColumnaCorreoVerificado(): bool
+    {
+        static $cache = null;
+
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = \'usuario\'
+               AND COLUMN_NAME = \'CorreoVerificado\''
+        );
+        $stmt->execute();
+        $cache = (int) $stmt->fetchColumn() > 0;
+
+        return $cache;
     }
 }

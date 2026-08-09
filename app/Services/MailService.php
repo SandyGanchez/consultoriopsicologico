@@ -424,6 +424,143 @@ HTML;
         }
     }
 
+    /**
+     * OTP de verificación de correo (registro / login no verificado).
+     * Reutiliza SMTP del consultorio. No envía contraseña ni datos clínicos.
+     */
+    public function enviarCodigoVerificacionCorreo(
+        string $correoDestino,
+        string $nombreDestino,
+        string $codigo,
+        string $nombreConsultorio = ''
+    ): void {
+        if ((string) Config::get('MAIL_VERIFICACION_DRY_RUN', '0') === '1') {
+            return;
+        }
+
+        $mail = $this->crearMailerBase();
+        $nombreMarca = trim($nombreConsultorio);
+        if ($nombreMarca === '') {
+            $nombreMarca = (string) Config::get(
+                'MAIL_FROM_NAME',
+                'Consultorio'
+            );
+        }
+
+        try {
+            $mail->addAddress($correoDestino, $nombreDestino);
+            $mail->isHTML(true);
+            $mail->Subject = 'Código de verificación de tu cuenta';
+
+            $nombreSeguro = htmlspecialchars(
+                $nombreDestino,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            $codigoSeguro = htmlspecialchars(
+                $codigo,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            $marcaSegura = htmlspecialchars(
+                $nombreMarca,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $mail->Body = <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="
+    margin:0;
+    padding:30px 15px;
+    background:#f4f8f6;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#3f4942;
+">
+    <div style="
+        max-width:560px;
+        margin:0 auto;
+        background:#ffffff;
+        border-radius:22px;
+        overflow:hidden;
+        box-shadow:0 12px 40px rgba(101,113,102,.15);
+    ">
+        <div style="
+            padding:28px;
+            background:linear-gradient(135deg,#DAEBE3,#99CDD8);
+            text-align:center;
+        ">
+            <h2 style="margin:0;color:#465149;font-size:23px;">
+                {$marcaSegura}
+            </h2>
+        </div>
+        <div style="padding:35px 36px;">
+            <h3 style="margin:0 0 18px;color:#465149;">
+                Verificación de correo
+            </h3>
+            <p>
+                Hola <strong>{$nombreSeguro}</strong>:
+            </p>
+            <p style="line-height:1.7;">
+                Tu código de verificación es:
+            </p>
+            <div style="
+                margin:28px 0;
+                padding:22px 15px;
+                border-radius:18px;
+                background:#FDE8D3;
+                text-align:center;
+            ">
+                <span style="
+                    color:#657166;
+                    font-size:34px;
+                    font-weight:bold;
+                    letter-spacing:9px;
+                ">
+                    {$codigoSeguro}
+                </span>
+            </div>
+            <p style="color:#657166;font-size:13px;line-height:1.7;">
+                Este código vence en 10 minutos.
+            </p>
+            <p style="color:#788279;font-size:13px;line-height:1.7;">
+                Si no creaste esta cuenta, puedes ignorar este mensaje.
+            </p>
+        </div>
+        <div style="
+            padding:20px;
+            background:#f7faf8;
+            color:#89938c;
+            text-align:center;
+            font-size:11px;
+        ">
+            Mensaje automático. No respondas este correo.
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+
+            $mail->AltBody =
+                "Hola {$nombreDestino}.\n\n"
+                . "Tu código de verificación es: {$codigo}\n\n"
+                . "Este código vence en 10 minutos.\n\n"
+                . "Si no creaste esta cuenta, puedes ignorar este mensaje.";
+
+            $mail->send();
+        } catch (MailException $e) {
+            error_log('Error PHPMailer verificación correo: envío fallido');
+
+            throw new RuntimeException(
+                'No se pudo enviar el correo de verificación.'
+            );
+        }
+    }
+
     public function enviarCodigoCambioCorreo(
         string $correoDestino,
         string $nombreDestino,
@@ -1028,7 +1165,7 @@ HTML;
 
     private function crearMailerBase(): PHPMailer
     {
-        $host = Config::get('MAIL_HOST');
+        $host = trim((string) Config::get('MAIL_HOST'));
         $port = (int) Config::get('MAIL_PORT', '587');
         $encryption = strtolower(
             Config::get('MAIL_ENCRYPTION', 'tls')
@@ -1047,9 +1184,23 @@ HTML;
             );
         }
 
+        $smtpHost = $host;
+        $forceIpv4 = (string) Config::get('MAIL_FORCE_IPV4', '0') === '1';
+        if ($forceIpv4) {
+            $resolved = gethostbyname($host);
+            if (
+                is_string($resolved)
+                && $resolved !== ''
+                && $resolved !== $host
+                && filter_var($resolved, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+            ) {
+                $smtpHost = $resolved;
+            }
+        }
+
         $mail = new PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host = $host;
+        $mail->Host = $smtpHost;
         $mail->SMTPAuth = true;
         $mail->Username = $username;
         $mail->Password = $password;
@@ -1061,6 +1212,19 @@ HTML;
             $encryption === 'ssl'
                 ? PHPMailer::ENCRYPTION_SMTPS
                 : PHPMailer::ENCRYPTION_STARTTLS;
+
+        // Si Host es IPv4, SNI/peer_name debe seguir siendo el hostname SMTP.
+        if ($forceIpv4 && $smtpHost !== $host) {
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                    'allow_self_signed' => false,
+                    'peer_name' => $host,
+                ],
+            ];
+        }
+
         $mail->setFrom($fromAddress, $fromName);
 
         return $mail;

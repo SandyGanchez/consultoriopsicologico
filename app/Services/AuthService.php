@@ -279,7 +279,7 @@ class AuthService
 
             $db->commit();
 
-            // Misma fuente canónica de sesión que el login (Usuario::buscarPorCorreo).
+            // Misma fuente canónica que el login (Usuario::buscarPorCorreo).
             $usuario = (new Usuario())->buscarPorCorreo(
                 $correo
             );
@@ -291,14 +291,42 @@ class AuthService
                 || (int) ($usuario['EstadoUsu'] ?? 0) !== 1
             ) {
                 throw new RuntimeException(
-                    'La cuenta se creó, pero no fue posible iniciar la sesión.'
+                    'La cuenta se creó, pero no fue posible continuar el registro.'
                 );
             }
 
+            // Nunca autenticar aquí si existe verificación de correo.
+            if (Session::has('usuario')) {
+                Session::remove('usuario');
+            }
+
+            $verificacion = new VerificacionCorreoService();
+
+            if ($verificacion->esquemaDisponible()) {
+                $nombre = trim(
+                    ((string) ($usuario['NombrePer'] ?? '')) . ' '
+                    . ((string) ($usuario['ApPatPer'] ?? ''))
+                );
+
+                $envio = $verificacion->iniciarTrasRegistro(
+                    (string) $usuario['ClvUsu'],
+                    $correo,
+                    $nombre
+                );
+
+                Session::set(
+                    'success',
+                    (string) ($envio['mensaje'] ??
+                        'Revisa tu correo e ingresa el código de verificación.')
+                );
+
+                Response::redirect('verificar-correo');
+            }
+
+            // Compatibilidad: sin migración aplicada, conservar login inmediato.
             Session::regenerar();
             Session::set('usuario', $usuario);
 
-            // Destino canónico del panel paciente (Helper::rutaPanelPorRol / /paciente).
             Response::redirect(
                 \App\Helpers\Helper::rutaPanelPorRol('PACIENTE')
             );
@@ -308,7 +336,7 @@ class AuthService
                 $db->rollBack();
             }
 
-            // Si falló después del COMMIT (sesión), no dejar sesión parcial.
+            // Si falló después del COMMIT, no dejar sesión autenticada parcial.
             if (Session::has('usuario')) {
                 Session::remove('usuario');
             }
